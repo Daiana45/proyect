@@ -1,0 +1,83 @@
+<svg 
+  xmlns="http://www.w3.org/2000/svg" 
+  viewBox="0 0 400 450" 
+  role="img" 
+  aria-label="SpotMarket Logo"
+  width="100%" 
+  height="100%">
+  
+  <defs>
+    <!-- Gradiente Rojo para el pin -->
+    <linearGradient id="pinGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#EF4444"/>
+      <stop offset="100%" stop-color="#DC2626"/>
+    </linearGradient>
+    <!-- Gradiente Dorado para el círculo de oferta -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD700"/>
+      <stop offset="100%" stop-color="#F5A623"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 1. FONDO: Azul marino muy oscuro -->
+  <rect width="400" height="350" rx="40" fill="#0B1220"/>
+  
+  <!-- 2. EFECTO RADAR: Ondas concéntricas en azul claro sutil -->
+  <circle cx="200" cy="175" r="120" fill="none" stroke="#1E3A5F" stroke-width="1.5" opacity="0.3"/>
+  <circle cx="200" cy="175" r="95" fill="none" stroke="#1E3A5F" stroke-width="1.5" opacity="0.4"/>
+  <circle cx="200" cy="175" r="70" fill="none" stroke="#1E3A5F" stroke-width="1.5" opacity="0.5"/>
+  <circle cx="200" cy="175" r="45" fill="none" stroke="#1E3A5F" stroke-width="1.5" opacity="0.6"/>
+  
+  <!-- 3. CUADRÍCULA TECNOLÓGICA: Líneas de mapa en azul medio -->
+  <g stroke="#1E3A5F" stroke-width="0.5" opacity="0.4">
+    <line x1="100" y1="55" x2="100" y2="295"/>
+    <line x1="150" y1="55" x2="150" y2="295"/>
+    <line x1="200" y1="55" x2="200" y2="295"/>
+    <line x1="250" y1="55" x2="250" y2="295"/>
+    <line x1="300" y1="55" x2="300" y2="295"/>
+    <line x1="60" y1="100" x2="340" y2="100"/>
+    <line x1="60" y1="150" x2="340" y2="150"/>
+    <line x1="60" y1="200" x2="340" y2="200"/>
+    <line x1="60" y1="250" x2="340" y2="250"/>
+  </g>
+  
+  <!-- Líneas diagonales -->
+  <g stroke="#1E3A5F" stroke-width="0.5" opacity="0.3">
+    <line x1="80" y1="75" x2="320" y2="275"/>
+    <line x1="320" y1="75" x2="80" y2="275"/>
+  </g>
+
+  <!-- 4. PUNTOS DORADOS DECORATIVOS -->
+  <circle cx="130" cy="110" r="3" fill="#F5A623" opacity="0.8"/>
+  <circle cx="280" cy="130" r="2.5" fill="#F5A623" opacity="0.7"/>
+  <circle cx="150" cy="240" r="2" fill="#F5A623" opacity="0.6"/>
+  <circle cx="270" cy="220" r="3" fill="#F5A623" opacity="0.8"/>
+
+  <!-- 5. PIN DE UBICACIÓN ROJO -->
+  <!-- Sombra -->
+  <ellipse cx="200" cy="240" rx="30" ry="8" fill="#DC2626" opacity="0.3"/>
+  
+  <!-- Cuerpo del pin -->
+  <path 
+    d="M200 235 C200 235 240 195 240 155 C240 133 222 115 200 115 C178 115 160 133 160 155 C160 195 200 235 200 235 Z" 
+    fill="url(#pinGrad)" 
+    stroke="#FF4444" 
+    stroke-width="1"
+  />
+  
+  <!-- Círculo interior del pin -->
+  <circle cx="200" cy="155" r="28" fill="#DC2626" stroke="#FF6B6B" stroke-width="1.5"/>
+  <circle cx="200" cy="155" r="22" fill="#0B1220"/>
+  
+  <!-- Bolsa de compras blanca dentro del pin -->
+  <g transform="translate(200, 155)">
+    <rect x="-10" y="-2" width="20" height="16" rx="2" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+    <path d="M-5 -2 C-5 -8 5 -8 5 -2" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+    <line x1="-6" y1="4" x2="6" y2="4" stroke="#FFFFFF" stroke-width="1.5"/>
+  </g>
+
+  <!-- 6. CÍRCULO DORADO CON % FLOTANTE -->
+  <circle cx="200" cy="95" r="22" fill="url(#goldGrad)" stroke="#FFD700" stroke-width="2"/>
+  <circle cx="200" cy="95" r="18" fill="#F5A623"/>
+  <text x="200" y="103" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="22" font-weight="900" fill="#0B1220">%</text>
+</svg>
