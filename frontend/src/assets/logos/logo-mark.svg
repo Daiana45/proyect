@@ -1,0 +1,57 @@
+<!-- Hoja cuadrada de 400 x 400.
+     Capas, de atras hacia adelante:
+     fondo, calles, anillos, puntos y el logo. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">
+
+  <!-- CAPA 1: fondo oscuro con esquinas redondeadas.
+       Mismo color que el fondo de la app. -->
+  <rect width="400" height="400" rx="48" fill="#050b1a"/>
+
+  <!-- CAPA 2: calles del mapa. Lineas finas azuladas.
+       M = empiezo, L = linea recta hasta ese punto.
+       Algunas son rectas y otras diagonales. -->
+  <g stroke="#1b2a4a" stroke-width="1.2">
+    <path d="M0 110L400 110"/>
+    <path d="M0 290L400 290"/>
+    <path d="M100 0L100 400"/>
+    <path d="M300 0L300 400"/>
+    <path d="M0 40L400 360"/>
+    <path d="M400 40L0 360"/>
+  </g>
+
+  <!-- CAPA 3: anillos concentricos tipo radar, centrados en el logo.
+       Cada uno es mas grande y mas transparente que el anterior. -->
+  <circle cx="200" cy="200" r="70" stroke="#3b82f6" stroke-opacity="0.30" stroke-width="2"/>
+  <circle cx="200" cy="200" r="110" stroke="#3b82f6" stroke-opacity="0.20" stroke-width="2"/>
+  <circle cx="200" cy="200" r="150" stroke="#3b82f6" stroke-opacity="0.12" stroke-width="2"/>
+
+  <!-- CAPA 4: puntos naranjas, como comercios en el mapa. -->
+  <g fill="#f59e0b" fill-opacity="0.85">
+    <circle cx="62" cy="72" r="6"/>
+    <circle cx="340" cy="80" r="5"/>
+    <circle cx="322" cy="302" r="7"/>
+    <circle cx="78" cy="330" r="4"/>
+  </g>
+
+  <!-- CAPA 5: el logo (pin, bolsa y moneda).
+       translate(130 92) lo mueve al centro de la hoja.
+       scale(2.2) lo agranda 2,2 veces.
+       Adentro va el mismo dibujo de logo-mark.svg. -->
+  <g transform="translate(130 92) scale(2.2)">
+    <ellipse cx="32" cy="93" rx="16" ry="2.5" fill="#f2384f" opacity="0.25"/>
+
+    <g transform="translate(0 14)">
+      <path d="M32 2C17.6 2 6 13.6 6 28c0 19 22.4 47.2 24.2 49.4 1 1.2 2.6 1.2 3.6 0C35.6 75.2 58 47 58 28 58 13.6 46.4 2 32 2Z" fill="#f2384f"/>
+      <circle cx="32" cy="28" r="15" stroke="#ff8a94" stroke-width="1.5"/>
+      <circle cx="32" cy="28" r="12.5" fill="#050b1a"/>
+      <rect x="24.5" y="27" width="15" height="11" rx="2.5" stroke="#fff" stroke-width="2"/>
+      <path d="M28.5 27v-2a3.5 3.5 0 0 1 7 0v2" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+    </g>
+
+    <circle cx="32" cy="14" r="12" fill="#ffc72c"/>
+    <circle cx="32" cy="14" r="8.5" fill="#f59e0b"/>
+    <path d="M35.5 9.5L28.5 18.5" stroke="#050b1a" stroke-width="2.2" stroke-linecap="round"/>
+    <circle cx="29" cy="10.5" r="1.9" stroke="#050b1a" stroke-width="1.8"/>
+    <circle cx="35" cy="17.5" r="1.9" stroke="#050b1a" stroke-width="1.8"/>
+  </g>
+</svg>

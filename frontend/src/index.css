@@ -1,11 +1,40 @@
 @import "tailwindcss";
 
-@theme {
---negro-: #0b0b0D;
---rojo-: #ed3038;
---amarillo-:#ffbd00;
---blanco-:#ffffff;
---gris-azulado: #6b7280;
---gris-oscuro: #171719;
---rojo-oscuro: #521719;
+/* @theme es donde le enseño a Tailwind MIS colores.
+   Cada variable que empieza con --color-xxx crea automáticamente clases:
+   --color-amarillo  →  bg-amarillo, text-amarillo, border-amarillo, etc.
+   "static" fuerza a generar todas las variables aunque no use la clase,
+   así también las puedo usar en CSS normal con var(--color-amarillo). */
+@theme static {
+  /* Fondos */
+  --color-negro: #050b1a;        /* fondo de toda la página */
+  --color-gris-oscuro: #0a1428;  /* tarjetas y paneles, un poco más claro que el fondo */
+  --color-borde: #1b2a4a;        /* líneas finas que separan secciones */
+
+  /* Textos */
+  --color-blanco: #f4f7ff;       /* texto principal */
+  --color-gris-azulado: #9aa8c4; /* texto secundario (descripciones, distancias) */
+
+  /* Marca */
+  --color-amarillo: #ffc72c;     /* botones y todo lo que el usuario puede tocar */
+  --color-rojo: #f2384f;         /* solo para el pin del logo y del mapa */
+  --color-rojo-oscuro: #521719;  /* resplandores de fondo */
+
+  /* Un color por categoría de comercio (pines del mapa) */
+  --color-azul: #3b82f6;
+  --color-verde: #22c58b;
+  --color-violeta: #a78bfa;
+  --color-naranja: #f59e0b;
+
+  /* Registro la fuente con el nombre "marca". Tailwind crea automáticamente la clase font-marca. Si Outfit no carga, usa cualquier fuente sans-serif del sistema. */
+--font-marca: "Cinzel Decorative", serif;
+/* Fuente del título. Pruebo primero IM Fell. Para comparar, cambio el nombre por "Pirata One". */
+--font-titulo: "IM Fell English SC", serif;
+}
+
+/* Estilos globales del <body>: aplican a toda la app. */
+body {
+  background-color: var(--color-negro); /* fondo oscuro en todas las páginas */
+  color: var(--color-blanco);           /* texto claro por defecto */
+  margin: 0;                            /* quita el margen que trae el navegador */
 }
