@@ -1,34 +1,20 @@
-// Acá guardo los estilos que quiero que tengan TODOS mis botones, sin importar de qué tipo sean. Lo dejo en una constante para no repetirlo.
-//rounded-full: le doy bordes totalmente redondos, forma de píldora.
-//px-5 py-2.5: el espacio de adentro, a los costados y arriba/abajo.
-//text-sm font-bold: letra chica y gruesa.
-//transition: hago que los cambios de color se animen suave.
-//cursor-pointer: quiero que aparezca la manito al pasar el mouse.
-const estilosBase = "rounded-full px-5 py-2.5 text-sm font-bold transition cursor-pointer";
-
-//Acá armo los tipos de botón que voy a tener.
-
-const variantes = {
-  // El botón principal: fondo amarillo y letra oscura.
-  // hover:brightness-110 hace que se aclare un poco cuando paso el mouse.
-  principal: "bg-amarillo text-negro hover:brightness-110",
-
-  // El botón de contorno: transparente, solo con un borde finito.
-  // hover:bg-white/10 le da un fondo blanco muy suave al pasar el mouse.
-  contorno: "border border-white/20 text-blanco hover:bg-white/10",
+// Los dos estilos de botón que uso en toda la app.
+// principal: fondo dorado, para la acción más importante.
+// contorno: solo borde, para la acción secundaria.
+const estilos = {
+  principal: "fondo-dorado text-negro hover:brightness-110",
+  contorno: "border border-borde hover:border-blanco",
 };
 
-// Mi componente Button. Cuando lo use, le puedo pasar estas cosas:
-// variante: qué tipo de botón quiero. Si no le digo nada, uso "principal".
-// className: estilos extra que quiera sumarle en un lugar puntual.
-// children: lo que escribo adentro del botón (el texto).
-// ...props: todo lo demás (onClick, type, disabled) se lo paso directo al <button>.
-export default function Button({ variante = "principal", className = "", children, ...props }) {
+// children: lo que va escrito adentro del botón.
+// variante: cuál de los dos estilos uso (por defecto, principal).
+// ...resto: cualquier otra cosa que le pase (onClick, type, disabled...) se la entrego al <button>.
+export default function Button({ children, variante = "principal", ...resto }) {
   return (
-    // Junto los tres grupos de clases: las base, las de mi variante y las extra.
-    // variantes[variante] busca en mi objeto el nombre que le pasé
-    // y me devuelve sus clases.
-    <button className={`${estilosBase} ${variantes[variante]} ${className}`} {...props}>
+    <button
+      className={`cursor-pointer rounded-full px-4 py-2 text-sm font-semibold transition ${estilos[variante]}`}
+      {...resto}
+    >
       {children}
     </button>
   );

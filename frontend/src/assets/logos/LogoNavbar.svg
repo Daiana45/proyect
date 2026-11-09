@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-22 -24 108 108" width="108" height="108">
+  <defs>
+    <linearGradient id="rojoPin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f25050"/>
+      <stop offset="1" stop-color="#d92626"/>
+    </linearGradient>
+    <!-- Degradado circular: blanco en el centro (se ve todo) y negro en los bordes (se esconde). -->
+    <radialGradient id="desvanecer" cx="32" cy="30" r="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0.5" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#000000"/>
+    </radialGradient>
+    <!-- La mascara usa ese degradado: lo que quede en la parte negra desaparece de a poco. -->
+    <mask id="mascara" maskUnits="userSpaceOnUse" x="-22" y="-24" width="108" height="108">
+      <rect x="-22" y="-24" width="108" height="108" fill="url(#desvanecer)"/>
+    </mask>
+  </defs>
+
+  <!-- Sin rectangulo de fondo: el icono es transparente y toma el color del navbar. -->
+
+  <!-- Anillos, calles y puntitos: todo con la mascara, asi se desvanecen hacia los bordes. -->
+  <g mask="url(#mascara)">
+    <g fill="none" stroke="#1d2b4d" stroke-width="0.8">
+      <circle cx="32" cy="30" r="23.5"/>
+      <circle cx="32" cy="30" r="47"/>
+      <circle cx="32" cy="30" r="63"/>
+    </g>
+    <g stroke="#1d2b4d" stroke-width="0.4">
+      <path d="M-70 30H130M32 -40V140"/>
+      <path d="M-70 10H130M-70 23H130M-70 76H130"/>
+      <path d="M6 -40V140M58 -40V140M-20 -40V140M84 -40V140"/>
+      <path d="M-28 -30L92 90M92 -30L-28 90"/>
+    </g>
+    <g fill="#f59e0b" opacity="0.9">
+      <circle cx="-5.5" cy="3.6" r="1.7"/>
+      <circle cx="75" cy="14" r="1.7"/>
+      <circle cx="70" cy="63" r="1.7"/>
+      <circle cx="5.5" cy="73" r="1.4"/>
+    </g>
+  </g>
+
+  <!-- La sombra roja oscura debajo de la punta del pin. -->
+  <ellipse cx="32" cy="73" rx="16" ry="4" fill="#dc2626" opacity="0.35"/>
+
+  <!-- El pin: relleno con degradado rojo y un borde mas claro. -->
+  <path d="M32 71C22 57 10 44 10 28A22 22 0 0 1 54 28C54 44 42 57 32 71Z" fill="url(#rojoPin)" stroke="#ff6b6b" stroke-width="0.8"/>
+
+  <!-- Centro del pin: banda roja oscura, aro claro y circulo oscuro. -->
+  <circle cx="32" cy="28" r="16.5" fill="#dc2626"/>
+  <circle cx="32" cy="28" r="15" fill="none" stroke="#ff8a94" stroke-width="1.5"/>
+  <circle cx="32" cy="28" r="12.5" fill="#050b1a"/>
+
+  <!-- La bolsa, dibujada solo con lineas blancas: cuerpo, raya del medio y asa. -->
+  <rect x="26" y="24.5" width="12" height="11" rx="2.5" fill="none" stroke="#ffffff" stroke-width="1.3"/>
+  <path d="M26 29H38" stroke="#ffffff" stroke-width="1.1"/>
+  <path d="M29.5 24.5v-1.5a2.5 2.5 0 0 1 5 0v1.5" fill="none" stroke="#ffffff" stroke-width="1.3" stroke-linecap="round"/>
+
+  <!-- La moneda dorada con el porcentaje, apoyada justo sobre el borde de arriba del pin. -->
+  <circle cx="32" cy="-5" r="12" fill="#ffc72c"/>
+  <circle cx="32" cy="-5" r="8.5" fill="#f59e0b"/>
+  <text x="32" y="-0.9" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="11.5" font-weight="800" fill="#111111">%</text>
+</svg>

@@ -1,13 +1,20 @@
-import logoFull from "../../assets/logos/logo-mark.svg";
+// Importo el icono del logo (el pin con los anillos y las calles de fondo).
+import logoNavbar from "../../assets/logos/LogoNavbar.svg";
 
-// Componente reutilizable. Recibe "className" para que quien lo use pueda agregarle estilos extra (por ejemplo, otro tamaño de texto). Si no le pasan nada, className vale "" (texto vacío).
-export default function Logo({ className = "" }) {
+// Logo del navbar: el icono + el nombre.
+export default function Logo() {
   return (
-    // inline-flex: pone el ícono y el texto en la misma fila. items-center: los centra verticalmente. gap-1: separación entre ellos.${className}: acá se agregan los estilos que vengan de afuera.
-    <span className={`inline-flex items-center gap-1 font-marca text-sm tracking-wide ${className}`}>
-        <img src={logoFull} alt="Logo SpotMarket" className="h-14 w-auto" />
-      {/* "Spot" en blanco (el color heredado) y "Market" en amarillo. */}
-      <span className="font-normal">Spot<span className="font-black text-amarillo">Market</span></span>
-    </span>
+    // gap-1: el espacio entre el icono y el nombre.
+    <div className="flex items-center gap-1">
+      {/* h-15 w-15: tamaño del icono (60px). shrink-0: nunca se achica ni se estira. alt vacío: el nombre ya está escrito al lado. */}
+      <img src={logoNavbar} alt="" className="h-11 w-11 shrink-0" />
+
+    {/* font-marca: mi fuente del logo (Lobster, una script gruesa estilo cartel).
+    text-2xl: tamaño del nombre. Sin negrita: Lobster ya es gruesa y tiene un solo grosor.
+    "Spot" en blanco y "Market" en dorado. */}
+<span className="font-marca text-xl">
+  Spot<span className="text-amarillo">Market</span>
+</span>
+    </div>
   );
 }

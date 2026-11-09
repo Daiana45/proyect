@@ -1,11 +1,6 @@
-import Navbar from "./componentes/layouts/Navbar";
-import Hero from "./componentes/inicio/Hero";
+import AppRouter from "./router/AppRouter";
 
+// App solo entrega el control al router: él decide qué página se ve según la dirección.
 export default function App() {
-  return (
-    <>
-      <Navbar activo="Inicio" />
-      <Hero />
-    </>
-  );
+  return <AppRouter />;
 }

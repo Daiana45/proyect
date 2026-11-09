@@ -1,40 +1,63 @@
 @import "tailwindcss";
 
-/* @theme es donde le enseño a Tailwind MIS colores.
-   Cada variable que empieza con --color-xxx crea automáticamente clases:
-   --color-amarillo  →  bg-amarillo, text-amarillo, border-amarillo, etc.
-   "static" fuerza a generar todas las variables aunque no use la clase,
-   así también las puedo usar en CSS normal con var(--color-amarillo). */
 @theme static {
   /* Fondos */
   --color-negro: #050b1a;        /* fondo de toda la página */
-  --color-gris-oscuro: #0a1428;  /* tarjetas y paneles, un poco más claro que el fondo */
-  --color-borde: #1b2a4a;        /* líneas finas que separan secciones */
+  --color-gris-oscuro: #0a1428;  /* tarjetas y paneles */
+  --color-borde: #1b2a4a;        /* líneas finas */
 
   /* Textos */
   --color-blanco: #f4f7ff;       /* texto principal */
-  --color-gris-azulado: #9aa8c4; /* texto secundario (descripciones, distancias) */
+  --color-gris-azulado: #9aa8c4; /* texto secundario */
 
   /* Marca */
-  --color-amarillo: #ffc72c;     /* botones y todo lo que el usuario puede tocar */
-  --color-rojo: #f2384f;         /* solo para el pin del logo y del mapa */
-  --color-rojo-oscuro: #521719;  /* resplandores de fondo */
+  --color-amarillo: #ffc72c;     /* acción principal: botones y todo lo que se toca */
+  --color-rojo: #f2384f;         /* acentos: pin, tachados, bordes */
+  --color-rojo-oscuro: #521719;  /* fondos de banner rojo */
 
-  /* Un color por categoría de comercio (pines del mapa) */
+  /* Categorías */
   --color-azul: #3b82f6;
   --color-verde: #22c58b;
   --color-violeta: #a78bfa;
   --color-naranja: #f59e0b;
 
-  /* Registro la fuente con el nombre "marca". Tailwind crea automáticamente la clase font-marca. Si Outfit no carga, usa cualquier fuente sans-serif del sistema. */
---font-marca: "Cinzel Decorative", serif;
-/* Fuente del título. Pruebo primero IM Fell. Para comparar, cambio el nombre por "Pirata One". */
---font-titulo: "IM Fell English SC", serif;
+  /* Fuentes */
+  --font-marca: "Cinzel Decorative", serif; /* solo el logo */
+  --font-titulo: "Panchang", sans-serif;    /* solo títulos grandes */
+  /* Texto de todo el resto: fuente genérica del sistema, liviana y neutra. */
+  --font-texto: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-titulo: "Fraunces", serif;        /* solo títulos grandes */
+  --font-marca: "Lobster", cursive;         /* solo el logo */
 }
 
-/* Estilos globales del <body>: aplican a toda la app. */
+/* Mi degradado dorado, para usarlo como clase: className="fondo-dorado". */
+@utility fondo-dorado {
+  background-image: linear-gradient(135deg, #ffe08a, var(--color-amarillo) 50%, #d99200);
+}
+
+html {
+  color-scheme: dark;       /* scroll e inputs del navegador en oscuro */
+  scroll-padding-top: 5rem; /* para que el navbar fijo no tape el título al saltar a un #enlace */
+}
+
 body {
-  background-color: var(--color-negro); /* fondo oscuro en todas las páginas */
-  color: var(--color-blanco);           /* texto claro por defecto */
-  margin: 0;                            /* quita el margen que trae el navegador */
+  background-color: var(--color-negro);
+  color: var(--color-blanco);
+  font-family: var(--font-texto);
+  margin: 0;
+}
+
+/* Al seleccionar texto se pinta de dorado. */
+::selection {
+  background: var(--color-amarillo);
+  color: var(--color-negro);
+}
+
+/* Al navegar con teclado se ve dónde estoy.
+   Va dentro de @layer base para que clases de Tailwind como focus:outline-none puedan anularla. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-amarillo);
+    outline-offset: 2px;
+  }
 }
