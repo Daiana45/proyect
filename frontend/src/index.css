@@ -1,19 +1,20 @@
+
 @import "tailwindcss";
 
 @theme static {
   /* Fondos */
-  --color-negro: #050b1a;        /* fondo de toda la página */
-  --color-gris-oscuro: #0a1428;  /* tarjetas y paneles */
-  --color-borde: #1b2a4a;        /* líneas finas */
+  --color-negro: #050b1a;
+  --color-gris-oscuro: #0a1428;
+  --color-borde: #1b2a4a;
 
   /* Textos */
-  --color-blanco: #f4f7ff;       /* texto principal */
-  --color-gris-azulado: #9aa8c4; /* texto secundario */
+  --color-blanco: #f4f7ff;
+  --color-gris-azulado: #9aa8c4;
 
   /* Marca */
-  --color-amarillo: #ffc72c;     /* acción principal: botones y todo lo que se toca */
-  --color-rojo: #f2384f;         /* acentos: pin, tachados, bordes */
-  --color-rojo-oscuro: #521719;  /* fondos de banner rojo */
+  --color-amarillo: #ffc72c;
+  --color-rojo: #f2384f;
+  --color-rojo-oscuro: #521719;
 
   /* Categorías */
   --color-azul: #3b82f6;
@@ -21,43 +22,76 @@
   --color-violeta: #a78bfa;
   --color-naranja: #f59e0b;
 
-  /* Fuentes */
-  --font-marca: "Cinzel Decorative", serif; /* solo el logo */
-  --font-titulo: "Panchang", sans-serif;    /* solo títulos grandes */
-  /* Texto de todo el resto: fuente genérica del sistema, liviana y neutra. */
+  /* Tipografías */
+  --font-marca: "Lobster", cursive;
+  --font-titulo: "Fraunces", serif;
   --font-texto: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-titulo: "Fraunces", serif;        /* solo títulos grandes */
-  --font-marca: "Lobster", cursive;         /* solo el logo */
 }
 
-/* Mi degradado dorado, para usarlo como clase: className="fondo-dorado". */
+/* Fondo de marca */
 @utility fondo-dorado {
-  background-image: linear-gradient(135deg, #ffe08a, var(--color-amarillo) 50%, #d99200);
+  background-image: linear-gradient(
+    135deg,
+    #ffe08a,
+    var(--color-amarillo) 50%,
+    #d99200
+  );
 }
 
+/* Configuración general */
 html {
-  color-scheme: dark;       /* scroll e inputs del navegador en oscuro */
-  scroll-padding-top: 5rem; /* para que el navbar fijo no tape el título al saltar a un #enlace */
+  color-scheme: dark;
+  scroll-padding-top: 5rem;
 }
 
 body {
+  margin: 0;
   background-color: var(--color-negro);
   color: var(--color-blanco);
   font-family: var(--font-texto);
-  margin: 0;
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
 }
 
-/* Al seleccionar texto se pinta de dorado. */
+/* Tema claro */
+html.tema-claro {
+  color-scheme: light;
+
+  --color-negro: #f4f7ff;
+  --color-gris-oscuro: #ffffff;
+  --color-borde: #dce3ef;
+
+  --color-blanco: #101828;
+  --color-gris-azulado: #64748b;
+
+  --color-amarillo: #a66d00;
+  --color-rojo: #e52f48;
+  --color-rojo-oscuro: #fce8eb;
+}
+
+/* Selección de texto */
 ::selection {
-  background: var(--color-amarillo);
+  background-color: var(--color-amarillo);
   color: var(--color-negro);
 }
 
-/* Al navegar con teclado se ve dónde estoy.
-   Va dentro de @layer base para que clases de Tailwind como focus:outline-none puedan anularla. */
+/*  navegación con teclado */
 @layer base {
   :focus-visible {
     outline: 2px solid var(--color-amarillo);
     outline-offset: 2px;
+  }
+}
+
+/* Respeto por la preferencia de movimiento del usuario */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

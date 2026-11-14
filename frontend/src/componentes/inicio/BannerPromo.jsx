@@ -1,41 +1,47 @@
 import { Link } from "react-router";
+import { motion } from "motion/react";
 
-// Color de fondo de cada variante (el lado del texto).
-const colores = {
-  dorado: "bg-amarillo text-negro",
-  rojo: "bg-rojo text-blanco",
+// Colores de cada variante: fondo, texto y estilo del botón
+const variantes = {
+  dorado: { fondo: "bg-amarillo text-negro", boton: "bg-negro text-blanco" },
+  rojo: { fondo: "bg-rojo text-blanco", boton: "bg-amarillo text-negro" },
 };
 
-// Botón de cada variante. En el dorado es oscuro; en el rojo, blanco.
-const botones = {
-  dorado: "bg-negro text-blanco hover:bg-blanco hover:text-negro",
-  rojo: "bg-blanco text-negro hover:bg-negro hover:text-blanco",
-};
+// Banner con foto a la izquierda (cortada en diagonal) y texto a la derecha.
+// Props: variante (dorado | rojo), titulo, texto, boton, ruta, imagen
+export default function BannerPromo({ variante = "dorado", titulo, texto, boton, ruta, imagen }) {
+  const estilo = variantes[variante];
 
-// Banner a todo el ancho: foto real a la izquierda con corte en diagonal, texto a la derecha.
-// Props: variante, titulo, texto, boton, ruta e imagen (foto real, va en public/banners/).
-export default function BannerPromo({ variante = "rojo", titulo, texto, boton = "Ver más", ruta = "/catalogo", imagen = "izquierda" }) {
   return (
-    <section className={`relative my-10 flex h-64 items-center overflow-hidden ${colores[variante]}`}>
-      {/* Foto: ocupa el 58% de la izquierda. El clipPath hace el corte en diagonal en el borde derecho.
-          Si quiero más o menos diagonal, cambio el 88% (más bajo = más inclinado). */}
-      {imagen && (
-        <img
-          src={imagen}
-          alt=""
-          className="absolute inset-y-0 left-0 hidden h-full w-[58%] object-cover md:block"
-          style={{ clipPath: "polygon(0 0, 100% 0, 88% 100%, 0 100%)" }}
-        />
-      )}
+    <section className="mx-auto my-10 max-w-7xl px-4">
+      <div className={`relative flex h-52 overflow-hidden rounded-md md:h-60 ${estilo.fondo}`}>
+        {/* Foto: ocupa el 58% de la izquierda y se corta en diagonal. Se oculta en celular */}
+        {imagen && (
+          <div
+            className="absolute inset-y-0 left-0 hidden w-[58%] md:block"
+            style={{ clipPath: "polygon(0 0, 100% 0, 88% 100%, 0 100%)" }}
+          >
+            <img src={imagen} alt="" className="h-full w-full object-cover object-center" />
+          </div>
+        )}
 
-      {/* Texto: si hay foto va a la derecha (42%); si no, queda a la izquierda */}
-      <div className={`relative w-full px-6 ${imagen ? "md:ml-auto md:w-[42%] md:pr-12" : "mx-auto max-w-7xl"}`}>
-        <h2 className="text-3xl font-semibold leading-tight">{titulo}</h2>
-        <p className="mt-2 max-w-sm text-sm opacity-90">{texto}</p>
-
-        <Link to={ruta} className={`mt-5 inline-block rounded-md px-5 py-2 text-sm transition ${botones[variante]}`}>
-          {boton}
-        </Link>
+        {/* Texto: a la derecha en pantallas grandes, ocupando todo en celular */}
+        <motion.div
+          initial={{ opacity: 0, x: 16 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.4 }}
+          className="relative z-10 flex w-full flex-col justify-center gap-2 px-6 md:ml-auto md:w-[42%] md:pl-4 md:pr-8"
+        >
+          <h2 className="font-titulo text-xl font-bold leading-tight md:text-2xl">{titulo}</h2>
+          <p className="text-xs opacity-80">{texto}</p>
+          <Link
+            to={ruta}
+            className={`mt-1 w-fit rounded-sm px-4 py-2 text-[11px] font-semibold transition hover:opacity-90 ${estilo.boton}`}
+          >
+            {boton}
+          </Link>
+        </motion.div>
       </div>
     </section>
   );

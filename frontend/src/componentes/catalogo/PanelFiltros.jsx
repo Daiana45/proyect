@@ -22,7 +22,7 @@ const rangosPrecio = [
 // Opciones de los grupos de "elegir una sola" (botones de opción). valor null = sin filtro.
 const distancias = [{ valor: null, texto: "Cualquiera" }, { valor: 1, texto: "Hasta 1 km" }, { valor: 2, texto: "Hasta 2 km" }, { valor: 3, texto: "Hasta 3 km" }, { valor: 5, texto: "Hasta 5 km" }];
 const valoraciones = [{ valor: null, texto: "Todas" }, { valor: 4, texto: "★ 4 o más" }, { valor: 4.5, texto: "★ 4,5 o más" }];
-const descuentos = [{ valor: null, texto: "Cualquiera" }, { valor: 10, texto: "10% o más" }, { valor: 20, texto: "20% o más" }, { valor: 30, texto: "30% o más" }];
+const descuentos = [{ valor: null, texto: "Cualquiera" }, { valor: 10, texto: "10% o más" }, { valor: 20, texto: "20% o más" }, { valor: 30, texto: "30% o más" }, { valor: 40, texto: "40% o más" }, { valor: 50, texto: "50% o más" }];
 const actualizaciones = [{ valor: null, texto: "Cualquier fecha" }, { valor: 1, texto: "Hoy y ayer" }, { valor: 7, texto: "Última semana" }, { valor: 30, texto: "Último mes" }];
 
 // Cuántas opciones muestro antes del "Ver más".
@@ -43,18 +43,21 @@ function Casilla({ texto, cantidad, marcada, alCambiar }) {
 }
 
 // Lista de casillas: muestra las primeras LIMITE y el resto queda detrás de "Ver más".
+// Las opciones tildadas se muestran siempre, aunque estén más abajo, para que no desaparezcan.
 function ListaCasillas({ opciones, elegidas, alCambiar, etiquetas = {} }) {
   const [todas, setTodas] = useState(false);
-  const visibles = todas ? opciones : opciones.slice(0, LIMITE);
+  const visibles = todas ? opciones : opciones.filter((o, i) => i < LIMITE || elegidas.includes(o.nombre));
+  // Cuántas quedan escondidas detrás del "Ver más"
+  const ocultas = opciones.length - visibles.length;
 
   return (
     <>
       {visibles.map((o) => (
         <Casilla key={o.nombre} texto={etiquetas[o.nombre] ?? o.nombre} cantidad={o.cantidad} marcada={elegidas.includes(o.nombre)} alCambiar={() => alCambiar(o.nombre)} />
       ))}
-      {opciones.length > LIMITE && (
+      {(ocultas > 0 || todas) && opciones.length > LIMITE && (
         <button onClick={() => setTodas(!todas)} className="mt-1 cursor-pointer text-xs text-azul hover:underline">
-          {todas ? "Ver menos" : `Ver más (${opciones.length - LIMITE})`}
+          {todas ? "Ver menos" : `Ver más (${ocultas})`}
         </button>
       )}
     </>
@@ -99,7 +102,7 @@ function GrupoOpciones({ nombre, opciones, actual, alCambiar }) {
 // Columna izquierda con todos los filtros.
 // Props: categoria (la activa), categorias, tipos/rubros/marcas/tiendas (opciones con cantidad), filtros (el estado),
 // alternar (marca/desmarca en una lista) y cambiar (guarda un valor suelto).
-export default function PanelFiltros({ categoria, categorias, tipos, rubros, marcas, tiendas, filtros, alternar, cambiar }) {
+export default function PanelFiltros({ categoria, categorias, tipos, rubros, marcas, tiendas, filtros, alternar, cambiar, puedeUbicacion }) {
   const claseCampo = "w-full rounded-md border border-borde bg-gris-oscuro px-2 py-1.5 text-xs";
   const claseEnlace = (activa) => `block py-1 text-xs ${activa ? "font-semibold text-amarillo" : "hover:text-amarillo"}`;
 
@@ -147,8 +150,14 @@ export default function PanelFiltros({ categoria, categorias, tipos, rubros, mar
         </div>
       </FiltroGrupo>
 
-      <FiltroGrupo titulo="Distancia">
-        <GrupoOpciones nombre="radio" opciones={distancias} actual={filtros.radio} alCambiar={(v) => cambiar("radio", v)} />
+            <FiltroGrupo titulo="Distancia">
+        {puedeUbicacion ? (
+          <GrupoOpciones nombre="radio" opciones={distancias} actual={filtros.radio} alCambiar={(v) => cambiar("radio", v)} />
+        ) : (
+          <p className="text-xs text-gris-azulado">
+            🔒 <Link to="/login" className="text-azul hover:underline">Iniciá sesión</Link> para filtrar por distancia.
+          </p>
+        )}
       </FiltroGrupo>
 
       <FiltroGrupo titulo="Valoración del comercio">

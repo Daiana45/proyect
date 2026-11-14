@@ -3,6 +3,7 @@ import { Link, useLocation, useSearchParams } from "react-router";
 import { productosCatalogo as productos } from "../data/catalogo";
 import { categorias } from "../data/categorias";
 import { datosTienda } from "../data/tiendas";
+import useAuth from "../componentes/hooks/useAuth";
 import { aKm } from "../utils/textoDistancia";
 import TarjetaResultado from "../componentes/catalogo/TarjetaResultado";
 import PanelFiltros from "../componentes/catalogo/PanelFiltros";
@@ -12,7 +13,7 @@ const hoy = Date.now();
 
 // Cómo arranca el estado de los filtros (todo vacío). Lo uso también para "Limpiar todo".
 const filtrosIniciales = {
-  tipos: [], marcas: [], tiendas: [],
+  tipos: [], rubros: [], marcas: [], tiendas: [],
   precioMin: "", precioMax: "",
   radio: null, valoracion: null, descuento: null, actualizado: null,
   abierto: false, soloOfertas: false, soloCuotas: false,
@@ -21,38 +22,48 @@ const filtrosIniciales = {
 function ContenidoCatalogo() {
   // Lo que viene en la dirección: /catalogo?categoria=Hogar&buscar=velas&oferta=true&orden=nuevos&dias=7...
   const [parametros] = useSearchParams();
+  const { estaLogueado } = useAuth();
   const categoria = parametros.get("categoria") ?? "";
   const buscar = (parametros.get("buscar") ?? "").toLowerCase();
+  const grupo = parametros.get("grupo") ?? "";
+  const sub = parametros.get("sub") ?? "";
 
-  // Los filtros y el orden arrancan con lo que venga en la dirección
-  // (?oferta=true, ?cuotas=true, ?marca=Arcor, ?dias=7, ?orden=nuevos...)
+    // Los filtros y el orden arrancan con lo que venga en la dirección
+  // (?oferta=true, ?cuotas=true, ?marca=Arcor, ?tienda=Tienda del Barrio, ?dias=7, ?orden=nuevos...)
   const [filtros, setFiltros] = useState({
     ...filtrosIniciales,
     soloOfertas: parametros.get("oferta") === "true",
     soloCuotas: parametros.get("cuotas") === "true",
     marcas: parametros.get("marca") ? [parametros.get("marca")] : [],
+    tiendas: parametros.get("tienda") ? [parametros.get("tienda")] : [],
     actualizado: parametros.get("dias") ? Number(parametros.get("dias")) : null,
   });
+
   const [orden, setOrden] = useState(parametros.get("orden") ?? "menor");
+    // "Más cerca" usa tu ubicación, así que solo vale con sesión
+  const ordenSeguro = !estaLogueado && orden === "cerca" ? "menor" : orden;
   // En pantallas chicas el panel de filtros se muestra o esconde con un botón
   const [verFiltros, setVerFiltros] = useState(false);
 
-  // Marca o desmarca un valor dentro de una lista (marcas, tiendas, tipos)
+  // Marca o desmarca un valor dentro de una lista (tipos, rubros, marcas, tiendas)
   const alternar = (clave, valor) =>
     setFiltros((f) => ({ ...f, [clave]: f[clave].includes(valor) ? f[clave].filter((v) => v !== valor) : [...f[clave], valor] }));
   // Guarda un valor suelto (precio, radio, ofertas...)
   const cambiar = (clave, valor) => setFiltros((f) => ({ ...f, [clave]: valor }));
 
   // 1) Base: productos de la categoría y la búsqueda (lo que viene de la dirección)
+   // 1) Base: productos de la categoría, del grupo/subcategoría del menú y la búsqueda (lo que viene de la dirección)
   const base = productos.filter((producto) => {
     const coincideCategoria = !categoria || producto.categorias.some((c) => c.nombre === categoria);
+    const coincideGrupo = !grupo || producto.grupo === grupo;
+    const coincideSub = !sub || producto.subcategoria === sub;
     const texto = `${producto.nombre} ${producto.marca} ${producto.tienda.nombre}`.toLowerCase();
-    return coincideCategoria && (!buscar || texto.includes(buscar));
+    return coincideCategoria && coincideGrupo && coincideSub && (!buscar || texto.includes(buscar));
   });
 
   // 2) Sobre la base aplico los filtros del panel
   const filtrados = base.filter((p) => {
-    const { tipos, marcas, tiendas, precioMin, precioMax, radio, valoracion, descuento, actualizado, abierto, soloOfertas, soloCuotas } = filtros;
+    const { tipos, rubros, marcas, tiendas, precioMin, precioMax, radio, valoracion, descuento, actualizado, abierto, soloOfertas, soloCuotas } = filtros;
     const tienda = datosTienda(p.tienda.nombre);
     // Porcentaje de descuento: cuánto bajó el precio respecto del anterior
     const porcentaje = p.precio_anterior ? (1 - p.precio / p.precio_anterior) * 100 : 0;
@@ -61,6 +72,7 @@ function ContenidoCatalogo() {
 
     return (
       (!tipos.length || tipos.includes(tienda.tipo)) &&
+      (!rubros.length || rubros.includes(tienda.rubro)) &&
       (!marcas.length || marcas.includes(p.marca)) &&
       (!tiendas.length || tiendas.includes(p.tienda.nombre)) &&
       (precioMin === "" || p.precio >= Number(precioMin)) &&
@@ -85,7 +97,7 @@ function ContenidoCatalogo() {
   };
   const resultados = [...filtrados].sort(ordenadores[orden] ?? ordenadores.menor);
 
-  // Arma las opciones de un filtro (marcas, tiendas, tipos).
+  // Arma las opciones de un filtro (tipos, rubros, marcas, tiendas).
   // La lista sale de TODOS los productos, así las opciones son siempre las mismas aunque cambie la categoría.
   // El número (cantidad) cuenta solo los de la base actual: si no hay ninguno, queda en 0.
   const contar = (campo) => {
@@ -104,6 +116,7 @@ function ContenidoCatalogo() {
   // Filtros activos: cada uno con su texto y cómo quitarlo (las etiquetas con ✕)
   const activos = [
     ...filtros.tipos.map((v) => ({ texto: v, quitar: () => alternar("tipos", v) })),
+    ...filtros.rubros.map((v) => ({ texto: v, quitar: () => alternar("rubros", v) })),
     ...filtros.marcas.map((v) => ({ texto: v, quitar: () => alternar("marcas", v) })),
     ...filtros.tiendas.map((v) => ({ texto: v, quitar: () => alternar("tiendas", v) })),
     ...(filtros.precioMin !== "" ? [{ texto: `Desde $${filtros.precioMin}`, quitar: () => cambiar("precioMin", "") }] : []),
@@ -126,6 +139,7 @@ function ContenidoCatalogo() {
             categoria={categoria}
             categorias={categorias}
             tipos={contar((p) => datosTienda(p.tienda.nombre).tipo)}
+            rubros={contar((p) => datosTienda(p.tienda.nombre).rubro)}
             marcas={contar((p) => p.marca)}
             tiendas={contar((p) => p.tienda.nombre)}
             filtros={filtros}
@@ -149,10 +163,10 @@ function ContenidoCatalogo() {
               <button onClick={() => setVerFiltros(!verFiltros)} className="cursor-pointer rounded-md border border-borde px-3 py-1.5 text-xs lg:hidden">
                 Filtros
               </button>
-              <select value={orden} onChange={(e) => setOrden(e.target.value)} className="rounded-md border border-borde bg-gris-oscuro px-3 py-1.5 text-xs">
+                            <select value={ordenSeguro} onChange={(e) => setOrden(e.target.value)} className="rounded-md border border-borde bg-gris-oscuro px-3 py-1.5 text-xs">
                 <option value="menor">Menor precio</option>
                 <option value="mayor">Mayor precio</option>
-                <option value="cerca">Más cerca</option>
+                {estaLogueado && <option value="cerca">Más cerca</option>}
                 <option value="nuevos">Más nuevos</option>
                 <option value="populares">Más populares</option>
               </select>
