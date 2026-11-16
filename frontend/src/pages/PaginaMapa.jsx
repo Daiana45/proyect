@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router";
-import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, ZoomControl, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, GeoJSON, ZoomControl, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { productosCatalogo } from "../data/catalogo";
@@ -9,10 +9,12 @@ import { comercios } from "../data/comercios";
 import { ubicaciones } from "../data/ubicaciones";
 import { aSlug } from "../utils/slug";
 import { CENTRO_FORMOSA, LIMITES_FORMOSA, distanciaKm, formatoDistancia, dentroDeFormosa } from "../utils/geo";
+import { esArea, lineasDe, buscarDireccionExacta, nombreDeUbicacion } from "../utils/buscadorLugares";
 import useAuth from "../componentes/hooks/useAuth";
 import useAccionPrivada from "../componentes/hooks/useAccionPrivada";
 
-// Color del pin según el tipo de comercio
+const ahoraMs = () => Date.now();
+
 const COLORES_TIPO = {
   Pyme: "#22c58b",
   Cadena: "#3b82f6",
@@ -22,32 +24,65 @@ const COLORES_TIPO = {
 };
 const TIPOS = ["Todos", "Pyme", "Cadena", "Mayorista", "Kiosco", "Feria"];
 
-// Mapa de calles de OpenStreetMap. No pide clave. Para el tema oscuro le aplico un filtro de CSS (ver ESTILOS).
-const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const TILES = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}";
+const TILES_SATELITE = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+const TILES_CALLES = "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}";
 
-// Formas de llegar. "servicio" es el servidor de rutas de OpenStreetMap para cada una.
-// "kmh" es la velocidad que uso solo si no hay internet y tengo que estimar el tiempo en línea recta.
+const RADIOS_ZONA = [100, 200, 300, 500, 1000, 2000];
+
 const MODOS = {
   foot: { texto: "A pie", icono: "🚶", servicio: "routed-foot", kmh: 5 },
   bike: { texto: "En bici", icono: "🚲", servicio: "routed-bike", kmh: 15 },
   car: { texto: "En auto", icono: "🚗", servicio: "routed-car", kmh: 30 },
 };
 
-// Dirección del servicio de rutas. Ojo: en este servidor la palabra "driving" va siempre, para los tres modos.
 const urlRuta = (servicio, origen, destino) =>
   `https://routing.openstreetmap.de/${servicio}/route/v1/driving/${origen[1]},${origen[0]};${destino[1]},${destino[0]}?overview=full&geometries=geojson`;
 
-// 75 min -> "1 h 15 min"
 const formatoTiempo = (min) => {
   if (min < 60) return `${min} min`;
   const resto = min % 60;
   return `${Math.floor(min / 60)} h${resto ? ` ${resto} min` : ""}`;
 };
 
-// Hora actual en milisegundos. Está afuera del componente porque React no deja llamar a Date.now() adentro (no es una función "pura").
-const ahoraMs = () => Date.now();
+const dentroDeAnillo = (punto, anillo) => {
+  let dentro = false;
+  for (let i = 0, j = anillo.length - 1; i < anillo.length; j = i++) {
+    const [xi, yi] = anillo[i];
+    const [xj, yj] = anillo[j];
+    if (yi > punto[1] !== yj > punto[1] && punto[0] < ((xj - xi) * (punto[1] - yi)) / (yj - yi) + xi) {
+      dentro = !dentro;
+    }
+  }
+  return dentro;
+};
 
-// Una lista armada una sola vez: cada comercio con su ubicación, sus datos y los productos que vende
+const dentroDeContorno = (lat, lng, geo) => {
+  if (geo.type === "Polygon") return dentroDeAnillo([lng, lat], geo.coordinates[0]);
+  return geo.coordinates.some((poligono) => dentroDeAnillo([lng, lat], poligono[0]));
+};
+
+const distanciaALineasM = (lat, lng, lineas) => {
+  const kx = 111320 * Math.cos((lat * Math.PI) / 180);
+  const ky = 110540;
+  let mejor = Infinity;
+  for (const linea of lineas) {
+    for (let i = 0; i < linea.length - 1; i++) {
+      const ax = (linea[i][0] - lng) * kx;
+      const ay = (linea[i][1] - lat) * ky;
+      const bx = (linea[i + 1][0] - lng) * kx;
+      const by = (linea[i + 1][1] - lat) * ky;
+      const dx = bx - ax;
+      const dy = by - ay;
+      const largo = dx * dx + dy * dy;
+      const t = largo === 0 ? 0 : Math.max(0, Math.min(1, -(ax * dx + ay * dy) / largo));
+      const d = Math.hypot(ax + t * dx, ay + t * dy);
+      if (d < mejor) mejor = d;
+    }
+  }
+  return mejor;
+};
+
 const lugares = Object.entries(ubicaciones).map(([nombre, ubicacion]) => {
   const propios = productosCatalogo.filter((p) => p.tienda.nombre === nombre);
   return {
@@ -56,7 +91,6 @@ const lugares = Object.entries(ubicaciones).map(([nombre, ubicacion]) => {
     ...datosTienda(nombre),
     direccion: comercios.find((c) => c.nombre === nombre)?.direccion,
     productos: propios.length,
-    // Los nombres de lo que vende, sin repetir: sirven para que la búsqueda encuentre "yerba" y te diga dónde hay
     listaProductos: [...new Set(propios.map((p) => p.nombre))],
   };
 });
@@ -69,17 +103,18 @@ const MENSAJES_GPS = {
   "no-soportado": "Tu navegador no soporta geolocalización.",
 };
 
-// Estilos de los pines, la ventanita (popup) y la animación del punto azul
 const ESTILOS = `
-.pin-wrap, .usuario-wrap, .cruz-wrap { background: none; border: none; }
+.pin-wrap, .usuario-wrap, .cruz-wrap, .lugar-wrap { background: none; border: none; }
 .pin-svg { display: block; filter: drop-shadow(0 3px 3px rgba(0,0,0,.45)); transform-origin: 50% 100%; transition: transform .15s ease; }
 .pin-activo { transform: scale(1.25); }
 .usuario { width: 18px; height: 18px; border-radius: 50%; background: #3b82f6; border: 3px solid #fff; animation: pulso 1.8s infinite; }
 @keyframes pulso { 0% { box-shadow: 0 0 0 0 rgba(59,130,246,.7); } 70% { box-shadow: 0 0 0 16px rgba(59,130,246,0); } 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); } }
+.lugar { width: 16px; height: 16px; border-radius: 50%; background: #ffc72c; border: 3px solid #050b1a; box-shadow: 0 0 0 2px #ffc72c; }
 .cruz { width: 22px; height: 22px; border: 2px solid #f2384f; border-radius: 50%; position: relative; background: rgba(242,56,79,.2); }
 .cruz::before, .cruz::after { content: ""; position: absolute; background: #f2384f; }
 .cruz::before { left: 50%; top: -6px; bottom: -6px; width: 2px; margin-left: -1px; }
 .cruz::after { top: 50%; left: -6px; right: -6px; height: 2px; margin-top: -1px; }
+.leaflet-tile { outline: 1px solid transparent; }
 .mapa-oscuro .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.95) saturate(0.7); }
 .leaflet-container { font-family: inherit; }
 .leaflet-popup-content-wrapper { background: var(--color-gris-oscuro); color: var(--color-blanco); border: 1px solid var(--color-borde); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
@@ -92,7 +127,6 @@ const ESTILOS = `
 .modo-coordenadas .leaflet-container, .modo-coordenadas .leaflet-interactive { cursor: crosshair !important; }
 `;
 
-// Pin clásico en forma de gota, del color del tipo de comercio. "activo" lo agranda y le pone borde dorado
 const iconoComercio = (color, activo) =>
   L.divIcon({
     className: "pin-wrap",
@@ -119,7 +153,13 @@ const iconoCruz = L.divIcon({
   iconAnchor: [11, 11],
 });
 
-// Detecta si la página está en tema claro (el Navbar le pone la clase "tema-claro" al <html>)
+const iconoLugar = L.divIcon({
+  className: "lugar-wrap",
+  html: '<div class="lugar"></div>',
+  iconSize: [16, 16],
+  iconAnchor: [8, 8],
+});
+
 function useTemaClaro() {
   const [claro, setClaro] = useState(() => document.documentElement.classList.contains("tema-claro"));
   useEffect(() => {
@@ -132,11 +172,10 @@ function useTemaClaro() {
   return claro;
 }
 
-// Escucha los clics del mapa, pero solo cuando está activo el modo "Copiar coordenadas"
-function CapturaClics({ activo, alElegir }) {
+function CapturaClics({ alClic }) {
   useMapEvents({
     click(e) {
-      if (activo) alElegir([e.latlng.lat, e.latlng.lng]);
+      alClic([e.latlng.lat, e.latlng.lng]);
     },
   });
   return null;
@@ -144,22 +183,21 @@ function CapturaClics({ activo, alElegir }) {
 
 export default function PaginaMapa() {
   const [parametros] = useSearchParams();
-  const tiendaParam = parametros.get("tienda"); // /mapa?tienda=Súper Sol abre ese comercio
+  const tiendaParam = parametros.get("tienda");
   const claro = useTemaClaro();
 
-  // PÚBLICO: ver el mapa, los comercios, buscar y filtrar por tipo.
-  // PRIVADO (pide login): usar tu ubicación, ordenar por cercanía, filtrar por distancia y "Cómo llegar".
   const { estaLogueado } = useAuth();
   const protegida = useAccionPrivada();
   const paginaActual = useLocation();
 
   const [mapa, setMapa] = useState(null);
   const marcadores = useRef({});
+  const [satelite, setSatelite] = useState(false);
 
   const [busqueda, setBusqueda] = useState("");
   const [tipo, setTipo] = useState("Todos");
   const [soloAbiertos, setSoloAbiertos] = useState(false);
-  const [radio, setRadio] = useState(0); // 0 = sin límite
+  const [radio, setRadio] = useState(0);
   const [seleccionado, setSeleccionado] = useState(tiendaParam);
 
   const [ubicacion, setUbicacion] = useState(null);
@@ -170,12 +208,17 @@ export default function PaginaMapa() {
   const [puntoElegido, setPuntoElegido] = useState(null);
   const [copiado, setCopiado] = useState(false);
 
-  // La ruta que se está mostrando (null = ninguna). Guarda el destino, el modo elegido y las rutas de cada modo.
+  // Buscador de direcciones exactas (sin sugerencias)
+  const [textoLugar, setTextoLugar] = useState("");
+  const [avisoLugar, setAvisoLugar] = useState("");
+  const [zona, setZona] = useState(null);
+  const [radioZona, setRadioZona] = useState(300);
+  const [marcando, setMarcando] = useState(false);
+  const peticionLugar = useRef(0);
+
   const [ruta, setRuta] = useState(null);
-  // Cuenta las peticiones: si toco "Cómo llegar" en otro comercio mientras calcula, descarto la respuesta vieja
   const peticion = useRef(0);
 
-  // Si llegué desde "Ver en el mapa" de un comercio, lo muestro abierto apenas carga el mapa
   useEffect(() => {
     if (!mapa || !tiendaParam) return;
     const lugar = lugares.find((l) => l.nombre === tiendaParam);
@@ -185,21 +228,47 @@ export default function PaginaMapa() {
     return () => clearTimeout(espera);
   }, [mapa, tiendaParam]);
 
-  // Punto desde el que mido las distancias: tu ubicación si estás logueado y en Formosa Capital, si no el centro
+ const buscarYIr = async (e) => {
+  e.preventDefault();
+  const texto = textoLugar.trim();
+  if (!texto) return;
+
+  setAvisoLugar("Buscando...");
+  const control = new AbortController();
+  const resultado = await buscarDireccionExacta(texto, control.signal);
+
+  if (resultado) {
+    setZona(resultado);
+    setAvisoLugar("");
+    mapa?.flyTo(resultado.centro, 16, { duration: 0.8 });
+  } else {
+    setAvisoLugar("No encontramos ese lugar. Probá con otro nombre o usá 'Marcar un punto en el mapa'.");
+  }
+};
+
   const fueraDeFormosa = ubicacion ? !dentroDeFormosa(ubicacion) : false;
   const usandoGPS = estaLogueado && ubicacion !== null && !fueraDeFormosa;
   const referencia = usandoGPS ? ubicacion : CENTRO_FORMOSA;
 
-  // Lo que escribió, sin espacios de más y en minúsculas, para comparar
   const consulta = busqueda.trim().toLowerCase();
 
+  const lineas = zona ? lineasDe(zona.geojson) : null;
+  const zonaTipo = !zona ? null : esArea(zona.geojson) ? "area" : lineas ? "linea" : "punto";
+
   const visibles = lugares
-    .map((l) => ({
-      ...l,
-      km: distanciaKm(referencia, [l.lat, l.lng]),
-      // Un producto que vende este comercio y coincide con la búsqueda (para avisarle "Tiene: ...")
-      conLo: consulta ? l.listaProductos.find((n) => n.toLowerCase().includes(consulta)) : undefined,
-    }))
+    .map((l) => {
+      const metrosZona = !zona
+        ? 0
+        : zonaTipo === "linea"
+          ? distanciaALineasM(l.lat, l.lng, lineas)
+          : distanciaKm(zona.centro, [l.lat, l.lng]) * 1000;
+      return {
+        ...l,
+        km: distanciaKm(referencia, [l.lat, l.lng]),
+        kmZona: metrosZona / 1000,
+        conLo: consulta ? l.listaProductos.find((n) => n.toLowerCase().includes(consulta)) : undefined,
+      };
+    })
     .filter(
       (l) =>
         (!consulta ||
@@ -207,24 +276,34 @@ export default function PaginaMapa() {
           l.conLo) &&
         (tipo === "Todos" || l.tipo === tipo) &&
         (!soloAbiertos || l.abierto) &&
-        // El filtro de distancia solo funciona con sesión
+        (!zona || (zonaTipo === "area" ? dentroDeContorno(l.lat, l.lng, zona.geojson) : l.kmZona * 1000 <= radioZona)) &&
         (!estaLogueado || !radio || l.km <= radio)
     )
-    // Sin sesión: orden alfabético. Con sesión: del más cercano al más lejano.
-    .sort((a, b) => (estaLogueado ? a.km - b.km : a.nombre.localeCompare(b.nombre)));
+    .sort((a, b) => (zona ? a.kmZona - b.kmZona : estaLogueado ? a.km - b.km : a.nombre.localeCompare(b.nombre)));
 
-  // Cuando busco algo, el mapa se acerca solo para mostrar todos los resultados.
-  // claveVisibles cambia solo cuando cambia QUÉ comercios se ven (así no se mueve en cada render).
   const claveVisibles = visibles.map((l) => l.nombre).join("|");
   useEffect(() => {
     if (!mapa || !consulta) return;
     const puntos = visibles.map((l) => [l.lat, l.lng]);
     if (puntos.length > 0) mapa.flyToBounds(puntos, { padding: [70, 70], maxZoom: 16, duration: 0.8 });
-    // visibles se arma en cada render; la clave de arriba ya avisa cuando de verdad cambia
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [claveVisibles, consulta, mapa]);
 
-  // Pide tu ubicación al navegador. "despues" (opcional) se llama al terminar, con el punto o con null si falló.
+  const quitarZona = () => {
+    peticionLugar.current++;
+    setZona(null);
+    setAvisoLugar("");
+    setTextoLugar("");
+    setMarcando(false);
+    mapa?.flyTo(CENTRO_FORMOSA, 13, { duration: 0.8 });
+  };
+
+  const alternarMarcado = () => {
+    setMarcando(!marcando);
+    setModoCoordenadas(false);
+    setPuntoElegido(null);
+  };
+
   const localizar = (despues) => {
     const avisar = typeof despues === "function" ? despues : null;
     if (!("geolocation" in navigator)) {
@@ -256,7 +335,6 @@ export default function PaginaMapa() {
     setTimeout(() => marcadores.current[lugar.nombre]?.openPopup(), 850);
   };
 
-  // Calcula las rutas a pie, en bici y en auto desde "origen" hasta el comercio y las muestra en el mapa
   const trazar = async (lugar, origen, desdeVos) => {
     const id = ++peticion.current;
     const destino = [lugar.lat, lugar.lng];
@@ -283,7 +361,6 @@ export default function PaginaMapa() {
       );
       rutas = Object.fromEntries(resultados);
     } catch {
-      // Sin internet o sin servicio: estimo en línea recta (un 30% más para parecerse a las calles reales)
       aproximado = true;
       const km = distanciaKm(origen, destino) * 1.3;
       rutas = Object.fromEntries(
@@ -294,12 +371,11 @@ export default function PaginaMapa() {
       );
     }
 
-    if (id !== peticion.current) return; // llegó tarde: ya pedí otra ruta
+    if (id !== peticion.current) return;
     setRuta({ destino: lugar.nombre, desdeVos, modo: "foot", estado: aproximado ? "aproximado" : "ok", rutas, calculadoEn: ahoraMs() });
     mapa?.flyToBounds(rutas.foot.puntos, { padding: [90, 90], maxZoom: 17, duration: 0.8 });
   };
 
-  // Botón "Cómo llegar" de la ficha (privado): si no tengo tu ubicación la pido primero
   const comoLlegar = (lugar) => {
     setSeleccionado(lugar.nombre);
     const desde = (punto) => {
@@ -321,7 +397,6 @@ export default function PaginaMapa() {
     setRuta(null);
   };
 
-  // Teclas dentro del buscador: Enter abre el primer resultado y Escape borra lo escrito
   const teclasBuscador = (e) => {
     if (e.key === "Enter" && visibles[0]) {
       e.preventDefault();
@@ -331,7 +406,6 @@ export default function PaginaMapa() {
     }
   };
 
-  // Modo "Copiar coordenadas": al hacer clic en el mapa copio "lat, lng" al portapapeles
   const elegirPunto = async (punto) => {
     setPuntoElegido(punto);
     setCopiado(false);
@@ -343,8 +417,25 @@ export default function PaginaMapa() {
     }
   };
 
+  const manejarClic = (punto) => {
+    if (marcando) {
+      const id = ++peticionLugar.current;
+      const nueva = { id: `punto-${punto[0]}-${punto[1]}`, nombre: "Punto marcado", centro: punto, geojson: null };
+      setZona(nueva);
+      setTextoLugar("");
+      setAvisoLugar("");
+      setMarcando(false);
+      nombreDeUbicacion(punto).then((nombre) => {
+        if (nombre && id === peticionLugar.current) setZona({ ...nueva, nombre });
+      });
+    } else if (modoCoordenadas) {
+      elegirPunto(punto);
+    }
+  };
+
   const alternarModoCoordenadas = () => {
     setModoCoordenadas(!modoCoordenadas);
+    setMarcando(false);
     setPuntoElegido(null);
     setCopiado(false);
   };
@@ -353,7 +444,6 @@ export default function PaginaMapa() {
     "cursor-pointer rounded-md border border-borde bg-gris-oscuro/95 px-3 py-2 text-xs font-semibold shadow-lg shadow-black/30 backdrop-blur transition hover:border-amarillo disabled:cursor-wait disabled:opacity-60";
   const kmAlCentro = ubicacion ? distanciaKm(ubicacion, CENTRO_FORMOSA) : 0;
 
-  // Datos de la ruta elegida para mostrar en el panel
   const rutaActual = ruta?.rutas[ruta.modo];
   const horaLlegada =
     rutaActual && ruta.calculadoEn
@@ -367,13 +457,13 @@ export default function PaginaMapa() {
       <p className="text-xs text-gris-azulado">
         <Link to="/" className="hover:underline">Inicio</Link> › <span className="text-blanco">Mapa</span>
       </p>
-      <h1 className="mt-2 font-titulo text-2xl font-bold md:text-3xl">Comercios cerca tuyo en Formosa Capital</h1>
+      <h1 className="mt-2 font-titulo text-2xl font-normal tracking-tight md:text-3xl">
+        Comercios cerca tuyo en <em className="italic text-amarillo">Formosa Capital</em>
+      </h1>
 
       <div className="mt-4 grid gap-4 lg:h-[calc(100vh-12rem)] lg:min-h-140 lg:grid-cols-[360px_minmax(0,1fr)]">
-        {/* ---------- PANEL IZQUIERDO ---------- */}
         <aside className="flex max-h-104 min-h-0 flex-col rounded-md border border-borde bg-gris-oscuro lg:max-h-none">
-          <div className="border-b border-borde p-4">
-            {/* Privado: sin sesión te manda a iniciar sesión y vuelve acá */}
+          <div className="overflow-y-auto border-b border-borde p-4">
             <button
               onClick={() => protegida(() => localizar(), "usar tu ubicación")}
               disabled={estadoGPS === "buscando"}
@@ -382,7 +472,6 @@ export default function PaginaMapa() {
               {estadoGPS === "buscando" ? "Buscando..." : estaLogueado ? "◎ Usar mi ubicación" : "🔒 Usar mi ubicación"}
             </button>
 
-            {/* Aviso para quien no inició sesión */}
             {!estaLogueado && (
               <p className="mt-2 text-[11px] text-gris-azulado">
                 <Link to="/login" state={{ desde: paginaActual, motivo: "ver los comercios más cercanos" }} className="text-azul hover:underline">
@@ -392,7 +481,6 @@ export default function PaginaMapa() {
               </p>
             )}
 
-            {/* Estado de la geolocalización */}
             {estaLogueado && estadoGPS === "ok" && !fueraDeFormosa && (
               <p className="mt-2 text-[11px] text-verde">
                 Ubicación encontrada (precisión ±{Math.round(precision)} m). Las distancias salen desde donde estás.
@@ -405,8 +493,86 @@ export default function PaginaMapa() {
             )}
             {estaLogueado && MENSAJES_GPS[estadoGPS] && <p className="mt-2 text-[11px] text-gris-azulado">{MENSAJES_GPS[estadoGPS]}</p>}
 
-            {/* Buscador con lupa y botón para borrar */}
-            <div className="relative mt-3">
+            {/* Buscador de direcciones exactas (sin sugerencias) */}
+            <form onSubmit={buscarYIr} className="mt-4">
+              <label htmlFor="buscar-lugar" className="text-[11px] font-semibold text-gris-azulado">
+                Ir a una dirección exacta
+              </label>
+              <div className="mt-1 flex gap-2">
+                <input
+                  id="buscar-lugar"
+                  value={textoLugar}
+                  onChange={(e) => setTextoLugar(e.target.value)}
+                  placeholder="Ej: Brandsen 3575"
+                  autoComplete="off"
+                  className="min-w-0 flex-1 rounded-md border border-borde bg-transparent px-3 py-2 text-xs outline-none focus:border-amarillo"
+                />
+                <button
+                  type="submit"
+                  className="shrink-0 cursor-pointer rounded-md border border-borde px-3 py-2 text-xs font-semibold transition hover:border-amarillo"
+                >
+                  Ir
+                </button>
+              </div>
+
+              {avisoLugar && (
+                <p className={`mt-2 text-[11px] ${avisoLugar === "Buscando..." ? "text-gris-azulado" : "text-naranja"}`}>
+                  {avisoLugar}
+                </p>
+              )}
+            </form>
+
+            <button
+              type="button"
+              onClick={alternarMarcado}
+              className={`mt-2 w-full cursor-pointer rounded-md border px-3 py-2 text-xs font-semibold transition ${
+                marcando ? "border-amarillo bg-amarillo/10 text-amarillo" : "border-borde hover:border-amarillo"
+              }`}
+            >
+              {marcando ? "Hacé clic en el mapa… (tocá para cancelar)" : "📍 Marcar un punto en el mapa"}
+            </button>
+
+            {zona && (
+              <div className="mt-3 rounded-md border border-amarillo/50 bg-amarillo/5 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="min-w-0 text-xs">
+                    <span className="font-semibold">{zona.nombre}</span>
+                    <span className="block text-[11px] text-gris-azulado">
+                      {visibles.length} {visibles.length === 1 ? "comercio" : "comercios"}{" "}
+                      {zonaTipo === "area"
+                        ? "dentro del barrio"
+                        : zonaTipo === "linea"
+                          ? `a menos de ${formatoDistancia(radioZona / 1000)} de la calle`
+                          : `a menos de ${formatoDistancia(radioZona / 1000)}`}
+                    </span>
+                  </p>
+                  <button
+                    onClick={quitarZona}
+                    aria-label="Quitar zona"
+                    className="cursor-pointer px-1 text-xs text-gris-azulado hover:text-blanco"
+                  >
+                    ✕
+                  </button>
+                </div>
+                {zonaTipo !== "area" && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {RADIOS_ZONA.map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => setRadioZona(m)}
+                        className={`cursor-pointer rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition ${
+                          radioZona === m ? "border-amarillo bg-amarillo text-negro" : "border-borde text-gris-azulado hover:border-blanco"
+                        }`}
+                      >
+                        {formatoDistancia(m / 1000)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="relative mt-4">
               <svg
                 viewBox="0 0 24 24"
                 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gris-azulado"
@@ -456,7 +622,6 @@ export default function PaginaMapa() {
                 <input type="checkbox" checked={soloAbiertos} onChange={(e) => setSoloAbiertos(e.target.checked)} className="accent-amarillo" />
                 Abiertos ahora
               </label>
-              {/* Distancia: privada. Sin sesión el selector queda bloqueado */}
               <select
                 value={estaLogueado ? radio : 0}
                 onChange={(e) => setRadio(Number(e.target.value))}
@@ -472,7 +637,6 @@ export default function PaginaMapa() {
               </select>
             </div>
 
-            {/* Leyenda de colores */}
             <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-gris-azulado">
               {Object.entries(COLORES_TIPO).map(([nombre, color]) => (
                 <span key={nombre} className="flex items-center gap-1">
@@ -485,13 +649,16 @@ export default function PaginaMapa() {
 
           <p className="px-4 pt-3 text-[11px] text-gris-azulado">
             {visibles.length} {visibles.length === 1 ? "comercio" : "comercios"} ·{" "}
-            {estaLogueado ? "del más cercano al más lejano" : "ordenados por nombre"}
+            {zona ? `del más cerca de ${zona.nombre}` : estaLogueado ? "del más cercano al más lejano" : "ordenados por nombre"}
           </p>
 
-          {/* Lista de comercios */}
           <div className="min-h-0 flex-1 overflow-y-auto p-3">
             {visibles.length === 0 && (
-              <p className="py-6 text-center text-xs text-gris-azulado">No hay comercios con esos filtros.</p>
+              <p className="py-6 text-center text-xs text-gris-azulado">
+                {zona && zonaTipo !== "area"
+                  ? "No hay comercios tan cerca. Probá con un radio más grande."
+                  : "No hay comercios con esos filtros."}
+              </p>
             )}
             <div className="flex flex-col gap-2">
               {visibles.map((l) => (
@@ -516,22 +683,23 @@ export default function PaginaMapa() {
                     <span className={`text-[10px] font-semibold ${l.abierto ? "text-verde" : "text-rojo"}`}>
                       {l.abierto ? "Abierto ahora" : "Cerrado ahora"}
                     </span>
-                    {/* Si encontré este comercio por un producto, aviso cuál */}
                     {l.conLo && <span className="block truncate text-[10px] text-azul">Tiene: {l.conLo}</span>}
                   </span>
-                  {/* La distancia solo se muestra con sesión */}
-                  {estaLogueado && <span className="shrink-0 text-right text-xs font-bold">{formatoDistancia(l.km)}</span>}
+                  {zona ? (
+                    <span className="shrink-0 text-right text-xs font-bold">{formatoDistancia(l.kmZona)}</span>
+                  ) : (
+                    estaLogueado && <span className="shrink-0 text-right text-xs font-bold">{formatoDistancia(l.km)}</span>
+                  )}
                 </button>
               ))}
             </div>
           </div>
         </aside>
 
-        {/* ---------- MAPA ---------- */}
         <div
-          className={`relative isolate h-[70vh] overflow-hidden rounded-md border border-borde lg:h-full ${
-            modoCoordenadas ? "modo-coordenadas" : ""
-          } ${claro ? "" : "mapa-oscuro"}`}
+          className={`relative h-[70vh] overflow-hidden rounded-md border border-borde lg:h-full ${
+            modoCoordenadas || marcando ? "modo-coordenadas" : ""
+          } ${claro || satelite ? "" : "mapa-oscuro"}`}
         >
           <MapContainer
             ref={setMapa}
@@ -545,24 +713,50 @@ export default function PaginaMapa() {
             className="h-full w-full"
             style={{ background: claro ? "#e8eef7" : "#0a1428" }}
           >
-            <TileLayer
-              url={TILES}
-              maxZoom={19}
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            />
+            {satelite ? (
+              <>
+                <TileLayer key="satelite" url={TILES_SATELITE} maxZoom={19} attribution="Imágenes &copy; Esri" />
+                <TileLayer key="calles-satelite" url={TILES_CALLES} maxZoom={19} />
+              </>
+            ) : (
+              <TileLayer key="calles" url={TILES} maxZoom={19} attribution="Tiles &copy; Esri" />
+            )}
             <ZoomControl position="bottomright" />
-            <CapturaClics activo={modoCoordenadas} alElegir={elegirPunto} />
+            <CapturaClics alClic={manejarClic} />
 
-            {/* Círculo del radio elegido */}
+            {zona && zonaTipo === "area" && (
+              <GeoJSON
+                key={zona.id}
+                data={zona.geojson}
+                style={{ color: "#ffc72c", weight: 2.5, dashArray: "6 6", fillColor: "#ffc72c", fillOpacity: 0.08 }}
+              />
+            )}
+            {zona && zonaTipo === "linea" && (
+              <GeoJSON key={zona.id} data={zona.geojson} style={{ color: "#ffc72c", weight: 6, opacity: 0.9 }} />
+            )}
+            {zona && zonaTipo !== "area" && zonaTipo !== "linea" && (
+              <Circle
+                center={zona.centro}
+                radius={radioZona}
+                pathOptions={{ color: "#ffc72c", weight: 2, dashArray: "6 6", fillOpacity: 0.07 }}
+              />
+            )}
+            {zona && zonaTipo !== "linea" && (
+              <Marker position={zona.centro} icon={iconoLugar} zIndexOffset={900}>
+                <Popup closeButton={false}>
+                  <div className="popup-comercio text-xs font-semibold">{zona.nombre}</div>
+                </Popup>
+              </Marker>
+            )}
+
             {estaLogueado && radio > 0 && (
               <Circle
                 center={referencia}
                 radius={radio * 1000}
-                pathOptions={{ color: "#ffc72c", weight: 1.5, dashArray: "6 6", fillOpacity: 0.05 }}
+                pathOptions={{ color: "#3b82f6", weight: 1.5, dashArray: "6 6", fillOpacity: 0.05 }}
               />
             )}
 
-            {/* La ruta: una línea oscura más gruesa abajo y la dorada arriba, para que se vea sobre cualquier fondo */}
             {rutaActual && (
               <>
                 <Polyline positions={rutaActual.puntos} pathOptions={{ color: "#050b1a", weight: 9, opacity: 0.55 }} />
@@ -573,7 +767,6 @@ export default function PaginaMapa() {
               </>
             )}
 
-            {/* Tu ubicación y su margen de error */}
             {usandoGPS && (
               <>
                 <Circle center={ubicacion} radius={precision} pathOptions={{ color: "#3b82f6", weight: 1, fillOpacity: 0.12 }} />
@@ -585,7 +778,6 @@ export default function PaginaMapa() {
               </>
             )}
 
-            {/* Un pin por comercio */}
             {visibles.map((l) => (
               <Marker
                 key={l.nombre}
@@ -598,7 +790,7 @@ export default function PaginaMapa() {
               >
                 <Popup closeButton={false} minWidth={230} maxWidth={260}>
                   <div className="popup-comercio">
-                    <p className="font-titulo text-base font-bold leading-tight">{l.nombre}</p>
+                    <p className="font-titulo text-base font-medium leading-tight">{l.nombre}</p>
                     <p className="mt-0.5 text-[11px]" style={{ opacity: 0.7 }}>
                       {l.rubro} · {l.tipo}
                     </p>
@@ -617,7 +809,6 @@ export default function PaginaMapa() {
                       <Link to={`/tienda/${aSlug(l.nombre)}`} className="popup-btn popup-btn-oro">
                         Ver perfil
                       </Link>
-                      {/* Privado: la ruta necesita tu ubicación, así que pide sesión */}
                       <button
                         type="button"
                         onClick={() => protegida(() => comoLlegar(l), "ver cómo llegar")}
@@ -631,17 +822,15 @@ export default function PaginaMapa() {
               </Marker>
             ))}
 
-            {/* Punto elegido en el modo "Copiar coordenadas" */}
             {puntoElegido && <Marker position={puntoElegido} icon={iconoCruz} interactive={false} />}
           </MapContainer>
 
-          {/* Panel de la ruta: tiempos por modo, distancia y hora de llegada */}
           {ruta && (
             <div className="absolute left-3 top-3 z-1000 w-72 max-w-[calc(100%-1.5rem)] rounded-md border border-borde bg-gris-oscuro/95 p-3 shadow-lg shadow-black/30 backdrop-blur">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-[10px] uppercase tracking-wide text-gris-azulado">Cómo llegar a</p>
-                  <p className="truncate font-titulo text-base font-bold leading-tight">{ruta.destino}</p>
+                  <p className="truncate font-titulo text-base font-medium leading-tight">{ruta.destino}</p>
                 </div>
                 <button
                   onClick={quitarRuta}
@@ -656,7 +845,6 @@ export default function PaginaMapa() {
 
               {ruta.estado !== "cargando" && (
                 <>
-                  {/* Un botón por forma de viajar, con su tiempo */}
                   <div className="mt-3 grid grid-cols-3 gap-1.5">
                     {Object.entries(MODOS).map(([clave, modo]) => (
                       <button
@@ -673,7 +861,6 @@ export default function PaginaMapa() {
                     ))}
                   </div>
 
-                  {/* La ruta elegida */}
                   <p className="mt-3 text-2xl font-bold text-amarillo">{formatoTiempo(rutaActual.min)}</p>
                   <p className="text-xs text-gris-azulado">
                     {formatoDistancia(rutaActual.km)} · {MODOS[ruta.modo].texto.toLowerCase()}
@@ -688,7 +875,6 @@ export default function PaginaMapa() {
             </div>
           )}
 
-          {/* Botones sobre el mapa */}
           <div className="absolute right-3 top-3 z-1000 flex flex-col items-end gap-2">
             <button
               onClick={() => protegida(() => localizar(), "usar tu ubicación")}
@@ -700,6 +886,9 @@ export default function PaginaMapa() {
             <button onClick={() => mapa?.flyTo(CENTRO_FORMOSA, 14, { duration: 0.8 })} className={botonMapa}>
               ⌂ Centro de Formosa
             </button>
+            <button onClick={() => setSatelite(!satelite)} aria-pressed={satelite} className={botonMapa}>
+              {satelite ? "🗺 Ver mapa" : "🛰 Ver satélite"}
+            </button>
             <button
               onClick={alternarModoCoordenadas}
               className={`${botonMapa} ${modoCoordenadas ? "border-rojo! text-rojo" : ""}`}
@@ -708,7 +897,12 @@ export default function PaginaMapa() {
             </button>
           </div>
 
-          {/* Ayuda y resultado del modo "Copiar coordenadas" */}
+          {marcando && (
+            <div className="absolute bottom-3 left-3 z-1000 max-w-xs rounded-md border border-amarillo bg-gris-oscuro/95 p-3 text-xs shadow-lg backdrop-blur">
+              <p className="text-gris-azulado">Hacé clic en el mapa donde está tu casa o el lugar que querés. Te muestro los comercios alrededor.</p>
+            </div>
+          )}
+
           {modoCoordenadas && (
             <div className="absolute bottom-3 left-3 z-1000 max-w-xs rounded-md border border-rojo bg-gris-oscuro/95 p-3 text-xs shadow-lg backdrop-blur">
               {puntoElegido ? (

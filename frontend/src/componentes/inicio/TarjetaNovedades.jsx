@@ -1,18 +1,22 @@
 import { useState } from "react";
+import useAccionPrivada from "../hooks/useAccionPrivada";
 
 // "className" me deja darle estilos extra desde afuera (lo uso para bajar las tarjetas pares).
 export default function TarjetaNovedades({ ultimaNovedades, className = "" }) {
   const [meGusta, setMeGusta] = useState(ultimaNovedades?.me_gusta || 0);
   const [dioLike, setDioLike] = useState(false);
+  // Dar me gusta es privado: sin sesión te lleva al login y después vuelve acá
+  const protegida = useAccionPrivada();
 
-  if (!ultimaNovedades){
-        return null;
-    }
+  if (!ultimaNovedades) {
+    return null;
+  }
 
   const alternarLike = () => {
     const nuevoEstado = !dioLike;
-    setMeGusta(nuevoEstado? meGusta - 1 : meGusta + 1);
-    setDioLike(!nuevoEstado);
+    // Si ahora le doy me gusta sumo 1; si se lo saco, resto 1
+    setMeGusta(nuevoEstado ? meGusta + 1 : meGusta - 1);
+    setDioLike(nuevoEstado);
   };
 
   return (
@@ -43,34 +47,35 @@ export default function TarjetaNovedades({ ultimaNovedades, className = "" }) {
 
       {/* El texto va debajo de la foto, sin cajas. */}
       <div className="mt-3">
-  {/* Nombre y precio: bajé de text-sm a text-[13px]. */}
-  <div className="flex items-baseline justify-between gap-2">
-    <h3 className="text-[13px] font-semibold">{ultimaNovedades.nombre}</h3>
-    <span className="text-[13px] font-semibold">$ {ultimaNovedades.precio.toLocaleString("es-AR")}</span>
-  </div>
+        {/* Nombre y precio */}
+        <div className="flex items-baseline justify-between gap-2">
+          <h3 className="text-[13px] font-semibold">{ultimaNovedades.nombre}</h3>
+          <span className="text-[13px] font-semibold">$ {ultimaNovedades.precio.toLocaleString("es-AR")}</span>
+        </div>
 
-  <div className="flex items-baseline justify-between gap-2">
-    <p className="text-[11px] text-gris-azulado">
-      {ultimaNovedades.tienda?.nombre} · {ultimaNovedades.categorias?.[0]?.nombre}
-    </p>
-    {/* El precio anterior tachado, ahora en rojo. */}
-    {ultimaNovedades.en_oferta && ultimaNovedades.precio_anterior && (
-      <span className="text-[11px] text-rojo line-through">
-        $ {ultimaNovedades.precio_anterior.toLocaleString("es-AR")}
-      </span>
-    )}
-  </div>
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="text-[11px] text-gris-azulado">
+            {ultimaNovedades.tienda?.nombre} · {ultimaNovedades.categorias?.[0]?.nombre}
+          </p>
+          {/* El precio anterior tachado, en rojo. */}
+          {ultimaNovedades.en_oferta && ultimaNovedades.precio_anterior && (
+            <span className="text-[11px] text-rojo line-through">
+              $ {ultimaNovedades.precio_anterior.toLocaleString("es-AR")}
+            </span>
+          )}
+        </div>
 
-  <div className="mt-2 flex items-center justify-between text-[11px] text-gris-azulado">
-    <span>{ultimaNovedades.distancia}</span>
-    <button
-      onClick={alternarLike}
-      className={`cursor-pointer transition ${dioLike ? "text-rojo" : "hover:text-blanco"}`}
-    >
-      ♥ {meGusta}
-    </button>
-  </div>
-</div>
+        <div className="mt-2 flex items-center justify-between text-[11px] text-gris-azulado">
+          <span>{ultimaNovedades.distancia}</span>
+          <button
+            onClick={() => protegida(alternarLike, "dar me gusta")}
+            aria-pressed={dioLike}
+            className={`cursor-pointer transition ${dioLike ? "text-rojo" : "hover:text-blanco"}`}
+          >
+            ♥ {meGusta}
+          </button>
+        </div>
+      </div>
     </article>
   );
 }

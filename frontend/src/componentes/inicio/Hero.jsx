@@ -20,7 +20,7 @@ export default function Hero() {
         <div className="flex flex-col gap-5">
 
           {/* font-titulo: Fraunces, una serif gruesa. tracking-tight y leading-[0.95] le dan el aspecto compacto. */}
-          <h1 className="font-titulo text-4xl font-extrabold leading-[0.95] tracking-tight md:text-5xl">
+          <h1 className="font-titulo text-4xl font-extralight leading-[0.95] tracking-tight md:text-5xl">
             {lineasTitulo.map((linea, indice) => (
               // Cada línea tiene un contenedor con overflow-hidden: lo que se sale de su caja queda oculto.
               // Así el texto parece "salir desde una cortina". pb-2 evita que se corten las letras.
@@ -58,8 +58,8 @@ export default function Hero() {
             transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
             className="max-w-md font-serif text-[18px] leading-relaxed text-gris-azulado"
           >
-            <span className="text-blanco">Informate</span> de los mejores precios de tu zona,{" "}
-            <span className="text-blanco">desde la comodidad</span> de tu hogar.
+            <span className="text-blanco font-extralight">Informate</span> de los mejores precios de tu zona,{" "}
+            <span className="text-blanco font-extralight">desde la comodidad</span> de tu hogar.
           </motion.p>
         </div>
 

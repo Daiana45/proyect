@@ -2,8 +2,8 @@ import { useEffect, useRef } from "react";
 import { Link } from "react-router";
 import TarjetaProducto from "./TarjetaProducto";
 
-// Ancho de una tarjeta (192px) + el espacio entre tarjetas (16px).
-const PASO = 208;
+// Ancho de una tarjeta (144px) + el espacio entre tarjetas (12px).
+const PASO = 156;
 
 // Recibo: titulo, la lista de productos a mostrar, la ruta del "Ver más"
 // y "filtros" (algo extra que quiera poner entre el encabezado y las tarjetas, como los botones de marcas).
@@ -11,7 +11,7 @@ export default function CarruselProductos({ titulo, productos, ruta = "/catalogo
   const pista = useRef(null);
   const pausado = useRef(false);
 
-  // Separo la última palabra del título para ponerla en negrita.
+  // Separo la última palabra del título para ponerla en cursiva y dorada.
   const palabras = titulo.split(" ");
   const ultima = palabras.pop();
 
@@ -38,8 +38,9 @@ export default function CarruselProductos({ titulo, productos, ruta = "/catalogo
 
       {/* Encabezado: título a la izquierda; "Ver más" y las flechas a la derecha. Una línea abajo lo separa. */}
       <div className="mb-4 flex items-end justify-between border-b border-borde pb-3">
-        <h2 className="text-2xl font-light uppercase">
-          {palabras.join(" ")} <strong className="font-bold">{ultima}</strong>
+        {/* Título en serif liviano y de tamaño normal, con la última palabra en cursiva dorada */}
+        <h2 className="font-titulo text-xl font-normal md:text-2xl">
+          {palabras.join(" ")} <em className="italic text-amarillo">{ultima}</em>
         </h2>
 
         <div className="flex items-center gap-3">
@@ -80,7 +81,7 @@ export default function CarruselProductos({ titulo, productos, ruta = "/catalogo
           ref={pista}
           onMouseEnter={() => (pausado.current = true)}
           onMouseLeave={() => (pausado.current = false)}
-          className="flex snap-x snap-mandatory items-start gap-4 overflow-x-auto scroll-smooth pb-2 scrollbar-none [&::-webkit-scrollbar]:hidden"
+          className="flex snap-x snap-mandatory items-start gap-3 overflow-x-auto scroll-smooth pb-2 scrollbar-none [&::-webkit-scrollbar]:hidden"
         >
           {productos.map((producto) => (
             <TarjetaProducto key={producto.id} producto={producto} />

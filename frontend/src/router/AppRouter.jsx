@@ -10,6 +10,7 @@ import PaginaTienda from "../pages/PaginaTienda";
 import PaginaMapa from "../pages/PaginaMapa";
 import PaginaAcceso from "../pages/PaginaAcceso";
 import PaginaPerfil from "../pages/PaginaPerfil";
+import PaginaEditorUbicaciones from "../pages/PaginaEditorUbicaciones";
 
 export default function AppRouter() {
   return (
@@ -25,6 +26,10 @@ export default function AppRouter() {
           <Route path="/tienda/:slug" element={<PaginaTienda />} />
           <Route path="/login" element={<PaginaAcceso modo="login" />} />
           <Route path="/registro" element={<PaginaAcceso modo="registro" />} />
+
+          {/* Herramienta para ubicar los comercios en el mapa. Solo existe mientras desarrollás (npm run dev),
+              en la versión publicada del sitio esta dirección no funciona. */}
+          {import.meta.env.DEV && <Route path="/editor-ubicaciones" element={<PaginaEditorUbicaciones />} />}
 
           {/* ---------- PRIVADAS: piden login. Todo lo que ponga acá adentro queda protegido ---------- */}
           <Route element={<RutaPrivada />}>

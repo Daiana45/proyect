@@ -1,5 +1,7 @@
-
+/* Fuentes: Newsreader (títulos), Inter (texto) y Lobster (logo) */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=Lobster&display=swap");
 @import "tailwindcss";
+
 
 @theme static {
   /* Fondos */
@@ -24,11 +26,12 @@
 
   /* Tipografías */
   --font-marca: "Lobster", cursive;
-  --font-titulo: "Fraunces", serif;
-  --font-texto: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-titulo: "Newsreader", Georgia, serif;
+  --font-texto: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
-/* Fondo de marca */
+
+
 @utility fondo-dorado {
   background-image: linear-gradient(
     135deg,
@@ -38,7 +41,7 @@
   );
 }
 
-/* Configuración general */
+
 html {
   color-scheme: dark;
   scroll-padding-top: 5rem;
@@ -54,37 +57,97 @@ body {
     color 0.25s ease;
 }
 
-/* Tema claro */
+
+/* ================================================================
+   TEMA CLARO
+   Los nombres de los colores son los mismos que en el oscuro (negro = fondo de la página,
+   gris-oscuro = tarjetas, blanco = texto), pero acá cada uno vale otra cosa.
+   Todos los textos de color pasan el contraste recomendado (4,5 a 1) sobre blanco.
+   ================================================================ */
 html.tema-claro {
   color-scheme: light;
 
-  --color-negro: #f4f7ff;
+  /* Fondo de la página: un gris cálido. Las tarjetas son blancas, así se despegan del fondo. */
+  --color-negro: #f3f1ec;
   --color-gris-oscuro: #ffffff;
-  --color-borde: #dce3ef;
+  --color-borde: #d6d0c2;
 
-  --color-blanco: #101828;
-  --color-gris-azulado: #64748b;
+  /* Textos: casi negro para el principal y un gris más firme para el secundario */
+  --color-blanco: #151a2c;
+  --color-gris-azulado: #5d6678;
 
-  --color-amarillo: #a66d00;
-  --color-rojo: #e52f48;
-  --color-rojo-oscuro: #fce8eb;
+  /* Marca: el dorado se queda brillante para fondos y bordes (el texto dorado se oscurece más abajo) */
+  --color-amarillo: #f2b705;
+  --color-rojo: #d1243d;
+  --color-rojo-oscuro: #fbe4e8;
+
+  /* Colores de texto más oscuros para que se lean sobre fondo claro */
+  --color-azul: #2563eb;
+  --color-verde: #0b7a54;
+  --color-violeta: #7c3aed;
+  --color-naranja: #b45309;
 }
 
-/* Selección de texto */
+/* En el tema claro "text-negro" es casi blanco: sobre dorado hay que usar letra oscura */
+html.tema-claro .fondo-dorado,
+html.tema-claro .bg-amarillo {
+  color: #1f1500;
+}
+
+/* El texto dorado es un marrón dorado: sobre fondo claro el amarillo brillante casi no se lee */
+html.tema-claro .text-amarillo {
+  color: #8a5a00;
+}
+
+/* Las tarjetas y paneles blancos llevan una sombra suave para despegarse del fondo.
+   (Si un elemento ya tiene su propia sombra, no se la piso.) */
+html.tema-claro .bg-gris-oscuro:not([class*="shadow"]) {
+  box-shadow:
+    0 1px 2px rgb(21 26 44 / 0.06),
+    0 2px 6px rgb(21 26 44 / 0.05);
+}
+
+/* Los bordes blancos transparentes del menú no se ven sobre claro: uso el borde normal */
+html.tema-claro .border-white\/10 {
+  border-color: var(--color-borde);
+}
+
+html.tema-claro ::selection {
+  color: #1f1500;
+}
+
+
+
 ::selection {
   background-color: var(--color-amarillo);
   color: var(--color-negro);
 }
 
-/*  navegación con teclado */
+
 @layer base {
+  /* Accesibilidad: navegación con teclado */
   :focus-visible {
     outline: 2px solid var(--color-amarillo);
     outline-offset: 2px;
   }
+
+  /* Títulos: serif liviano y un poco apretado, como la otra página */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-titulo);
+    letter-spacing: -0.02em;
+  }
 }
 
-/* Respeto por la preferencia de movimiento del usuario */
+
+html,
+body {
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

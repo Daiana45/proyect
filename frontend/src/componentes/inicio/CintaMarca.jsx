@@ -1,8 +1,7 @@
 import { motion } from "motion/react";
-// Importo el icono chico del logo (solo el pin con la moneda, sin fondo).
-import logoMark from "../../assets/logos/logo-mark.svg";
+import { Receipt } from "lucide-react";
 
-// Las frases que van pasando por la cinta.
+// Estas son las frases que aparecen en la cinta.
 const frases = [
   "Mirá todo en el mapa",
   "Subí tus productos",
@@ -13,21 +12,41 @@ const frases = [
 
 export default function CintaMarca() {
   return (
-    // overflow-hidden: lo que se sale de la cinta queda oculto. Las dos líneas finas son el borde de arriba y de abajo.
-    <div className="overflow-hidden border-y border-borde py-1.5" aria-hidden>
-      {/* Repito la lista 4 veces seguidas. Muevo todo hasta la mitad (-50%) y vuelvo a empezar:
-          como la segunda mitad es igual a la primera, el salto no se nota. */}
+    // Dejo el fondo transparente para que se integre con la página.
+    <div
+      className="overflow-hidden border-y border-borde/60 py-2"
+      aria-hidden="true"
+    >
       <motion.div
-        className="flex w-max gap-4"
+        className="flex w-max"
         animate={{ x: ["0%", "-50%"] }}
-        transition={{ duration: 40, ease: "linear", repeat: Infinity }}
+        transition={{
+          duration: 40,
+          ease: "linear",
+          repeat: Infinity,
+        }}
       >
-        {[...frases, ...frases, ...frases, ...frases].map((frase, indice) => (
-          <div key={indice} className="flex items-center gap-8">
-            {/* text-xs: letra chica. whitespace-nowrap: que cada frase quede en una sola línea. */}
-            <span className="whitespace-nowrap text-xs font-extralight uppercase">{frase}</span>
-            {/* El logo como imagen. h-6: alto de 24px, el ancho se ajusta solo (w-auto). */}
-            <img src={logoMark} alt="" className="h-7 w-auto shrink-0" />
+        {[0, 1].map((grupo) => (
+          <div
+            key={grupo}
+            className="flex shrink-0 items-center gap-5 pr-5"
+          >
+            {frases.map((frase, indice) => (
+              <div
+                key={`${grupo}-${indice}`}
+                className="flex shrink-0 items-center gap-8"
+              >
+                <span className="whitespace-nowrap text-xs font-extralight text-texto-secundario md:text-sm">
+                  {frase}
+                </span>
+
+<Receipt
+  size={20}
+  strokeWidth={0.75}
+  className="shrink-0 text-violeta"
+/>
+              </div>
+            ))}
           </div>
         ))}
       </motion.div>

@@ -1,5 +1,4 @@
 import { Link } from "react-router";
-import { motion } from "motion/react";
 
 // Color del degradado de la foto según la categoría (mientras no haya foto real).
 // Los colores de categoría solo se usan acá, en lo que es de categorías.
@@ -26,11 +25,11 @@ export default function TarjetaProducto({ producto }) {
   const categoria = producto.categorias?.[0]?.nombre;
 
   return (
-    <Link to={`/producto/${producto.id}`} className="block w-48 shrink-0 rounded-sm">
-      <motion.article whileHover={{ y: -3 }} transition={{ duration: 0.15 }}>
-        {/* Foto. Si todavía no hay imagen, un degradado de la categoría */}
+    <Link to={`/producto/${producto.id}`} className="block w-36 shrink-0 snap-start rounded-sm">
+      <article>
+        {/* Foto más baja que antes (4/3). Si todavía no hay imagen, un degradado de la categoría */}
         <div
-          className={`relative aspect-4/5 overflow-hidden rounded-sm bg-linear-to-br to-negro ${
+          className={`relative aspect-6/8 overflow-hidden rounded-sm bg-linear-to-br to-negro ${
             degradados[categoria] ?? "from-azul/35"
           }`}
         >
@@ -56,7 +55,7 @@ export default function TarjetaProducto({ producto }) {
           <span>{producto.distancia}</span>
           <span>♥ {producto.me_gusta}</span>
         </div>
-      </motion.article>
+      </article>
     </Link>
   );
 }

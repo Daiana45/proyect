@@ -1,47 +1,80 @@
 import { Link } from "react-router";
-import { motion } from "motion/react";
 
-// Colores de cada variante: fondo, texto y estilo del botón
+// Colores sólidos (igual que tus otros banners: amarillo y rojo)
 const variantes = {
-  dorado: { fondo: "bg-amarillo text-negro", boton: "bg-negro text-blanco" },
-  rojo: { fondo: "bg-rojo text-blanco", boton: "bg-amarillo text-negro" },
+  dorado: {
+    fondo: "bg-amarillo",
+    texto: "text-[#1f1500]",
+    suave: "text-[#1f1500]/75",
+    boton: "bg-[#050b1a] text-[#f4f7ff] hover:bg-[#1b2a4a]",
+    // Filtro para la imagen: la oscurece un poco para que no sea blanco puro
+    filtroImagen: "brightness-90 contrast-120",
+  },
+  rojo: {
+    fondo: "bg-linear-to-r from-rojo-oscuro to-rojo",
+    texto: "text-[#f4f7ff]",
+    suave: "text-[#f4f7ff]/80",
+    boton: "bg-[#f4f7ff] text-[#050b1a] hover:bg-white",
+    filtroImagen: "brightness-95 contrast-105",
+  },
 };
 
-// Banner con foto a la izquierda (cortada en diagonal) y texto a la derecha.
-// Props: variante (dorado | rojo), titulo, texto, boton, ruta, imagen
-export default function BannerPromo({ variante = "dorado", titulo, texto, boton, ruta, imagen }) {
-  const estilo = variantes[variante];
+export default function BannerPromo({
+  variante = "dorado",
+  titulo,
+  texto,
+  boton,
+  imagen,
+  ruta = "/catalogo",
+  etiqueta,
+}) {
+  const estilo = variantes[variante] ?? variantes.dorado;
+
+  const palabras = titulo.trim().split(" ");
+  const ultima = palabras.pop() || "";
+  const resto = palabras.join(" ");
 
   return (
-    <section className="mx-auto my-10 max-w-7xl px-4">
-      <div className={`relative flex h-52 overflow-hidden rounded-md md:h-60 ${estilo.fondo}`}>
-        {/* Foto: ocupa el 58% de la izquierda y se corta en diagonal. Se oculta en celular */}
+    <section className="mx-auto max-w-7xl px-4 py-8">
+      <div className={`relative overflow-hidden rounded-md ${estilo.fondo} ${estilo.texto}`}>
+
+        {/* Imagen con clip-path diagonal (como tu banner amarillo original) */}
         {imagen && (
-          <div
-            className="absolute inset-y-0 left-0 hidden w-[58%] md:block"
-            style={{ clipPath: "polygon(0 0, 100% 0, 88% 100%, 0 100%)" }}
-          >
-            <img src={imagen} alt="" className="h-full w-full object-cover object-center" />
+          <div className="h-44  md:absolute md:inset-y-0 md:left-0 md:h-auto md:w-[50%] md:[clip-path:polygon(0_0,100%_0,90%_100%,0_100%)]">
+            <img
+              src={imagen}
+              alt=""
+              className={`h-full w-full object-cover ${estilo.filtroImagen}`}
+            />
           </div>
         )}
 
-        {/* Texto: a la derecha en pantallas grandes, ocupando todo en celular */}
-        <motion.div
-          initial={{ opacity: 0, x: 16 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.4 }}
-          className="relative z-10 flex w-full flex-col justify-center gap-2 px-6 md:ml-auto md:w-[42%] md:pl-4 md:pr-8"
-        >
-          <h2 className="font-titulo text-xl font-bold leading-tight md:text-2xl">{titulo}</h2>
-          <p className="text-xs opacity-80">{texto}</p>
+        {/* Texto con la línea de costado que pediste */}
+        <div className="relative flex flex-col items-start gap-3 px-8 py-8 md:ml-auto md:min-h-60 md:w-[42%] md:justify-center md:px-12 md:py-8">
+          {etiqueta && (
+            <span className="text-[11px] font-semibold uppercase tracking-widest opacity-70">
+              {etiqueta}
+            </span>
+          )}
+
+          {/* Línea de costado: regla vertical dorada/roja */}
+          <div className="absolute left-0 top-1/2 h-16 w-1 -translate-y-1/2 bg-current opacity-30 md:left-6" />
+
+          <h2 className="font-titulo text-3xl font-normal leading-tight md:text-4xl">
+            {resto} <em className="italic">{ultima}</em>
+          </h2>
+
+          <p className={`max-w-sm text-sm leading-relaxed ${estilo.suave}`}>
+            {texto}
+          </p>
+
           <Link
             to={ruta}
-            className={`mt-1 w-fit rounded-sm px-4 py-2 text-[11px] font-semibold transition hover:opacity-90 ${estilo.boton}`}
+            className={`mt-1 rounded-sm px-5 py-2.5 text-xs font-semibold transition-colors ${estilo.boton}`}
           >
-            {boton}
+            {boton} →
           </Link>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

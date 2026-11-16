@@ -8,6 +8,7 @@ import BannerProductos from "../componentes/inicio/BannerProductos";
 import BannerLugares from "../componentes/inicio/BannerLugares";
 import BannerFinal from "../componentes/inicio/BannerFinal";
 import { productos } from "../data/productos";
+import { productosCatalogo } from "../data/catalogo";
 
 // Fecha de hoy, calculada una vez al cargar el archivo.
 const hoy = Date.now();
@@ -18,12 +19,22 @@ const DIAS_NOVEDAD = 7;
 const ofertas = productos.filter((producto) => producto.en_oferta);
 // En cuotas: solo los que tienen el campo cuotas.
 const enCuotas = productos.filter((producto) => producto.cuotas);
-// Novedades: solo lo cargado en los últimos 7 días, lo más reciente primero.
-// Novedades: solo lo cargado en los últimos 7 días (días enteros), lo más reciente primero.
-const novedades = productos
+
+// Novedades: lo cargado en los últimos 7 días (días enteros), lo más reciente primero.
+// Las saco del catálogo, que tiene fechas relativas a hoy (las de productos.js son fijas y se vencen).
+const vistos = new Set();
+const novedades = productosCatalogo
   .filter((producto) => Math.floor((hoy - new Date(producto.createdAt)) / 86400000) <= DIAS_NOVEDAD)
   .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-  .slice(0, 8);// Destacados: los que más "me gusta" tienen.
+  // Si el mismo producto está en varios comercios, muestro solo uno
+  .filter((producto) => {
+    if (vistos.has(producto.nombre)) return false;
+    vistos.add(producto.nombre);
+    return true;
+  })
+  .slice(0, 8);
+
+// Destacados: los que más "me gusta" tienen.
 const destacados = [...productos].sort((a, b) => b.me_gusta - a.me_gusta).slice(0, 8);
 
 export default function PaginaInicio() {
@@ -36,12 +47,13 @@ export default function PaginaInicio() {
       {/* "ruta" es a dónde lleva el "Ver más →" de cada carrusel (el catálogo ya filtrado) */}
       <CarruselProductos titulo="Ofertas de la semana" productos={ofertas} ruta="/catalogo?oferta=true" />
 
-      {/* Banner con foto del mercado (public/banners/mercado.jpg) */}
+            {/* Banner con foto del mercado (public/banners/mercado.jpg). El botón lleva al catálogo */}
       <BannerPromo
         variante="dorado"
         titulo="Comprá más inteligente"
         texto="Compará precios entre comercios cerca tuyo y elegí dónde te conviene."
         boton="Comparar ahora"
+        ruta="/catalogo"
         imagen="/banners/mercado.jpg"
       />
 
@@ -58,12 +70,12 @@ export default function PaginaInicio() {
       />
 
       {/* Banner de comercios con la foto real (public/banners/local.jpg) */}
-<BannerLugares
-  titulo="Los comercios de tu barrio"
-  texto="Conocé los locales de la zona y mirá qué venden."
-  boton="Ver en el mapa"
-  imagen="/banners/local.jpg"
-/>
+      <BannerLugares
+        titulo="Los comercios de tu barrio"
+        texto="Conocé los locales de la zona y mirá qué venden."
+        boton="Ver en el mapa"
+        imagen="/banners/local.jpg"
+      />
 
       <CarruselProductos titulo="Productos destacados" productos={destacados} ruta="/catalogo?orden=populares" />
 
